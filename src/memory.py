@@ -50,18 +50,36 @@ class Memory:
     CTRL_SCROLL = 0xF7D04
     CTRL_CLEAR = 0xF7D05
     
+    # Cycle-based timer register offsets
+    TIMER_COUNTER = 0xF7E00
+    TIMER_COMPARE = 0xF7E04
+    TIMER_CONTROL = 0xF7E08
+    TIMER_PRESCALER = 0xF7E0C
+    TIMER_STATUS = 0xF7E10
+    
+    # Real-time timer register offsets
+    RT_TIMER_COUNTER = 0xF7E20
+    RT_TIMER_FREQUENCY = 0xF7E24
+    RT_TIMER_CONTROL = 0xF7E28
+    RT_TIMER_STATUS = 0xF7E2C
+    RT_TIMER_COMPARE = 0xF7E30
+    
     SIZE = 1024 * 1024  # 1MB
     
-    def __init__(self, display=None, protect_text=False):
+    def __init__(self, display=None, timer=None, rt_timer=None, protect_text=False):
         """
         Initialize memory
         
         Args:
             display: Display object for memory-mapped I/O
+            timer: Cycle-based timer object for memory-mapped timer registers
+            rt_timer: Real-time timer object for memory-mapped timer registers
             protect_text: If True, prevent writes to text segment
         """
         self.data = bytearray(self.SIZE)
         self.display = display
+        self.timer = timer
+        self.rt_timer = rt_timer
         self.protect_text = protect_text
         
     def _check_bounds(self, address, size=4):
@@ -100,6 +118,14 @@ class Memory:
         self._check_bounds(address, 4)
         self._check_alignment(address, 4)
         
+        # Handle cycle-based timer register reads
+        if self.timer and self.TIMER_COUNTER <= address <= self.TIMER_STATUS:
+            return self._handle_timer_read(address)
+        
+        # Handle real-time timer register reads
+        if self.rt_timer and self.RT_TIMER_COUNTER <= address <= self.RT_TIMER_COMPARE:
+            return self._handle_rt_timer_read(address)
+        
         # Read 4 bytes in little-endian order
         value = int.from_bytes(self.data[address:address+4], byteorder='little', signed=False)
         return value
@@ -120,6 +146,12 @@ class Memory:
             self._handle_display_write(address, value)
         elif self.DISPLAY_CONTROL_START <= address <= self.DISPLAY_CONTROL_END:
             self._handle_control_register_write(address, value)
+        elif self.timer and self.TIMER_COUNTER <= address <= self.TIMER_STATUS:
+            self._handle_timer_write(address, value)
+            return  # Timer registers don't write to memory
+        elif self.rt_timer and self.RT_TIMER_COUNTER <= address <= self.RT_TIMER_COMPARE:
+            self._handle_rt_timer_write(address, value)
+            return  # RT timer registers don't write to memory
         
         # Write 4 bytes in little-endian order
         value = value & 0xFFFFFFFF  # Ensure 32-bit value
@@ -187,3 +219,55 @@ class Memory:
             lines.append(f'0x{addr:08X}  {hex_bytes:<48}  {ascii_chars}')
         
         return '\n'.join(lines)
+    
+    def _handle_timer_read(self, address):
+        """Handle reads from timer registers"""
+        if address == self.TIMER_COUNTER:
+            return self.timer.read_counter()
+        elif address == self.TIMER_COMPARE:
+            return self.timer.read_compare()
+        elif address == self.TIMER_CONTROL:
+            return self.timer.read_control()
+        elif address == self.TIMER_PRESCALER:
+            return self.timer.read_prescaler()
+        elif address == self.TIMER_STATUS:
+            return self.timer.read_status()
+        else:
+            return 0
+    
+    def _handle_timer_write(self, address, value):
+        """Handle writes to timer registers"""
+        if address == self.TIMER_COUNTER:
+            self.timer.write_counter(value)
+        elif address == self.TIMER_COMPARE:
+            self.timer.write_compare(value)
+        elif address == self.TIMER_CONTROL:
+            self.timer.write_control(value)
+        elif address == self.TIMER_PRESCALER:
+            self.timer.write_prescaler(value)
+    
+    def _handle_rt_timer_read(self, address):
+        """Handle reads from real-time timer registers"""
+        if address == self.RT_TIMER_COUNTER:
+            return self.rt_timer.read_counter()
+        elif address == self.RT_TIMER_FREQUENCY:
+            return self.rt_timer.read_frequency()
+        elif address == self.RT_TIMER_CONTROL:
+            return self.rt_timer.read_control()
+        elif address == self.RT_TIMER_STATUS:
+            return self.rt_timer.read_status()
+        elif address == self.RT_TIMER_COMPARE:
+            return self.rt_timer.read_compare()
+        else:
+            return 0
+    
+    def _handle_rt_timer_write(self, address, value):
+        """Handle writes to real-time timer registers"""
+        if address == self.RT_TIMER_COUNTER:
+            self.rt_timer.write_counter(value)
+        elif address == self.RT_TIMER_FREQUENCY:
+            self.rt_timer.write_frequency(value)
+        elif address == self.RT_TIMER_CONTROL:
+            self.rt_timer.write_control(value)
+        elif address == self.RT_TIMER_COMPARE:
+            self.rt_timer.write_compare(value)

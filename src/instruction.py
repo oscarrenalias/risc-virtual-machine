@@ -126,8 +126,17 @@ INSTRUCTION_SET = {
     'LUI': InstructionType.U_TYPE,  # Load upper immediate
     'AUIPC': InstructionType.U_TYPE,# Add upper immediate to PC
     
+    # CSR instructions (I-type format)
+    'CSRRW': InstructionType.I_TYPE,  # CSR read/write
+    'CSRRS': InstructionType.I_TYPE,  # CSR read and set bits
+    'CSRRC': InstructionType.I_TYPE,  # CSR read and clear bits
+    'CSRRWI': InstructionType.I_TYPE, # CSR read/write immediate
+    'CSRRSI': InstructionType.I_TYPE, # CSR read and set bits immediate
+    'CSRRCI': InstructionType.I_TYPE, # CSR read and clear bits immediate
+    
     # System
     'HALT': InstructionType.HALT,
+    'MRET': InstructionType.HALT,  # Return from interrupt (like HALT but different semantics)
     'NOP': InstructionType.I_TYPE,  # No operation (implemented as ADDI x0, x0, 0)
 }
 

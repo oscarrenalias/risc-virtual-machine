@@ -1,6 +1,6 @@
-# Digital Clock - Never-ending clock display
+# Digital Clock - Real-time clock display
 # Displays time in HH:MM:SS format in the center of the screen
-# Updates every "second" (simulated with delay loop)
+# Uses real-time timer interrupt at 1 Hz to update every second
 
 .text
 main:
@@ -12,128 +12,188 @@ main:
     # Load display base address
     LUI x10, 0xF0           # x10 = 0xF0000 (display buffer base)
 
-clock_loop:
-    # Clear the clock line (row 12, centered)
-    # Position: row 12 * 80 * 4 = 3840 = 0xF00 + base
-    ADDI x11, x10, 3840     # x11 = position for row 12
+    # Set up real-time timer interrupt handler
+    LUI x1, 0x0
+    ADDI x1, x1, 376        # Handler address (timer_handler label)
+    CSRRW x0, 0x305, x1     # mtvec = handler address
     
-    # Add offset to center (column 35 for "HH:MM:SS" = 8 chars)
-    ADDI x11, x11, 560      # x11 += 35*4*4 = 560 (center position)
+    # Configure real-time timer for 1 Hz
+    LUI x1, 0xF8
+    ADDI x1, x1, -480       # RT timer base = 0xF7E20
+    
+    ADDI x3, x0, 1          # Frequency = 1 Hz (use x3 instead of x2)
+    SW x3, 4(x1)            # Write to RT_TIMER_FREQUENCY
+    
+    ADDI x3, x0, 0x01       # Enable bit
+    SW x3, 8(x1)            # Write to RT_TIMER_CONTROL
+    
+    # Enable real-time timer interrupt in MIE (bit 11 = 0x800)
+    LUI x3, 0x0
+    ADDI x3, x3, 0x800
+    CSRRW x0, 0x304, x3     # mie = RT timer interrupt enable
+    
+    # Enable global interrupts in mstatus
+    ADDI x3, x0, 0x08
+    CSRRW x0, 0x300, x3     # mstatus.MIE = 1
+    
+    # Display initial clock
+    JAL x1, display_clock
+
+main_loop:
+    # Main loop - just wait for interrupts
+    JAL x0, main_loop
+
+# Display clock subroutine
+display_clock:
+    # Save return address
+    ADDI x2, x2, -4
+    SW x1, 0(x2)
+    
+    # Clear the clock line (row 12, centered)
+    ADDI x11, x10, 3840
+    ADDI x11, x11, 560      # Center position
     
     # Display hours (tens digit)
     ADDI x12, x20, 0        # Copy hours
     ADDI x13, x0, 10        # Divisor
-    
-    # Get tens digit of hours
-    ADDI x14, x0, 0         # Counter for division
-div_hours_tens:
-    BLT x12, x13, done_hours_tens
+    ADDI x14, x0, 0         # Counter
+div_h_tens:
+    BLT x12, x13, done_h_tens
     SUB x12, x12, x13
     ADDI x14, x14, 1
-    JAL x0, div_hours_tens
-done_hours_tens:
-    ADDI x14, x14, 48       # Convert to ASCII ('0' = 48)
-    SW x14, 0(x11)          # Write tens digit
+    JAL x0, div_h_tens
+done_h_tens:
+    ADDI x14, x14, 48       # Convert to ASCII
+    SW x14, 0(x11)
+    ADDI x12, x12, 48       # Hours ones digit
+    SW x12, 4(x11)
     
-    # Display hours (ones digit)
-    ADDI x12, x12, 48       # Convert remainder to ASCII
-    SW x12, 4(x11)          # Write ones digit
-    
-    # Display colon
-    ADDI x14, x0, 58        # ':' = 58
+    # Colon
+    ADDI x14, x0, 58
     SW x14, 8(x11)
     
     # Display minutes (tens digit)
-    ADDI x12, x21, 0        # Copy minutes
-    ADDI x14, x0, 0         # Counter
-div_min_tens:
-    BLT x12, x13, done_min_tens
+    ADDI x12, x21, 0
+    ADDI x14, x0, 0
+div_m_tens:
+    BLT x12, x13, done_m_tens
     SUB x12, x12, x13
     ADDI x14, x14, 1
-    JAL x0, div_min_tens
-done_min_tens:
-    ADDI x14, x14, 48       # Convert to ASCII
-    SW x14, 12(x11)         # Write tens digit
+    JAL x0, div_m_tens
+done_m_tens:
+    ADDI x14, x14, 48
+    SW x14, 12(x11)
+    ADDI x12, x12, 48       # Minutes ones digit
+    SW x12, 16(x11)
     
-    # Display minutes (ones digit)
-    ADDI x12, x12, 48       # Convert remainder to ASCII
-    SW x12, 16(x11)         # Write ones digit
-    
-    # Display colon
-    ADDI x14, x0, 58        # ':' = 58
+    # Colon
+    ADDI x14, x0, 58
     SW x14, 20(x11)
     
     # Display seconds (tens digit)
-    ADDI x12, x22, 0        # Copy seconds
-    ADDI x14, x0, 0         # Counter
-div_sec_tens:
-    BLT x12, x13, done_sec_tens
+    ADDI x12, x22, 0
+    ADDI x14, x0, 0
+div_s_tens:
+    BLT x12, x13, done_s_tens
     SUB x12, x12, x13
     ADDI x14, x14, 1
-    JAL x0, div_sec_tens
-done_sec_tens:
-    ADDI x14, x14, 48       # Convert to ASCII
-    SW x14, 24(x11)         # Write tens digit
-    
-    # Display seconds (ones digit)
-    ADDI x12, x12, 48       # Convert remainder to ASCII
-    SW x12, 28(x11)         # Write ones digit
-    
-    # Add a title above the clock
-    ADDI x11, x10, 3520     # Row 11 * 80 * 4 = 3520
-    ADDI x11, x11, 544      # Center "DIGITAL CLOCK"
-    
-    ADDI x14, x0, 68        # 'D'
-    SW x14, 0(x11)
-    ADDI x14, x0, 73        # 'I'
-    SW x14, 4(x11)
-    ADDI x14, x0, 71        # 'G'
-    SW x14, 8(x11)
-    ADDI x14, x0, 73        # 'I'
-    SW x14, 12(x11)
-    ADDI x14, x0, 84        # 'T'
-    SW x14, 16(x11)
-    ADDI x14, x0, 65        # 'A'
-    SW x14, 20(x11)
-    ADDI x14, x0, 76        # 'L'
+    JAL x0, div_s_tens
+done_s_tens:
+    ADDI x14, x14, 48
     SW x14, 24(x11)
-    ADDI x14, x0, 32        # ' '
-    SW x14, 28(x11)
-    ADDI x14, x0, 67        # 'C'
-    SW x14, 32(x11)
-    ADDI x14, x0, 76        # 'L'
-    SW x14, 36(x11)
-    ADDI x14, x0, 79        # 'O'
-    SW x14, 40(x11)
-    ADDI x14, x0, 67        # 'C'
-    SW x14, 44(x11)
-    ADDI x14, x0, 75        # 'K'
-    SW x14, 48(x11)
+    ADDI x12, x12, 48       # Seconds ones digit
+    SW x12, 28(x11)
     
-    # Delay loop (smaller delay to see updates before instruction limit)
-    ADDI x15, x0, 100       # Small delay counter
-delay_loop:
-    ADDI x15, x15, -1
-    BNE x15, x0, delay_loop
+    # Display title "REAL-TIME CLOCK"
+    ADDI x11, x10, 3200     # Row 10
+    ADDI x11, x11, 512      # Center title
+    
+    ADDI x14, x0, 82        # 'R'
+    SW x14, 0(x11)
+    ADDI x14, x0, 69        # 'E'
+    SW x14, 4(x11)
+    ADDI x14, x0, 65        # 'A'
+    SW x14, 8(x11)
+    ADDI x14, x0, 76        # 'L'
+    SW x14, 12(x11)
+    ADDI x14, x0, 45        # '-'
+    SW x14, 16(x11)
+    ADDI x14, x0, 84        # 'T'
+    SW x14, 20(x11)
+    ADDI x14, x0, 73        # 'I'
+    SW x14, 24(x11)
+    ADDI x14, x0, 77        # 'M'
+    SW x14, 28(x11)
+    ADDI x14, x0, 69        # 'E'
+    SW x14, 32(x11)
+    ADDI x14, x0, 32        # ' '
+    SW x14, 36(x11)
+    ADDI x14, x0, 67        # 'C'
+    SW x14, 40(x11)
+    ADDI x14, x0, 76        # 'L'
+    SW x14, 44(x11)
+    ADDI x14, x0, 79        # 'O'
+    SW x14, 48(x11)
+    ADDI x14, x0, 67        # 'C'
+    SW x14, 52(x11)
+    ADDI x14, x0, 75        # 'K'
+    SW x14, 56(x11)
+    
+    # Restore return address and return
+    LW x1, 0(x2)
+    ADDI x2, x2, 4
+    JALR x0, x1, 0
+
+# Real-time timer interrupt handler
+timer_handler:
+    # Save registers
+    ADDI x2, x2, -32
+    SW x10, 0(x2)
+    SW x11, 4(x2)
+    SW x12, 8(x2)
+    SW x13, 12(x2)
+    SW x14, 16(x2)
+    SW x1, 20(x2)
     
     # Increment seconds
     ADDI x22, x22, 1
     ADDI x13, x0, 60
-    BLT x22, x13, clock_loop
+    BLT x22, x13, update_display
     
-    # Seconds overflow: reset to 0, increment minutes
+    # Seconds overflow - increment minutes
     ADDI x22, x0, 0
     ADDI x21, x21, 1
-    BLT x21, x13, clock_loop
+    BLT x21, x13, update_display
     
-    # Minutes overflow: reset to 0, increment hours
+    # Minutes overflow - increment hours
     ADDI x21, x0, 0
     ADDI x20, x20, 1
     ADDI x13, x0, 24
-    BLT x20, x13, clock_loop
+    BLT x20, x13, update_display
     
-    # Hours overflow: reset to 0
+    # Hours overflow - reset to 00:00:00
     ADDI x20, x0, 0
-    JAL x0, clock_loop      # Continue forever
+
+update_display:
+    # Update the display
+    JAL x1, display_clock
+    
+    # Clear RT timer interrupt
+    LUI x11, 0xF8
+    ADDI x11, x11, -480     # RT timer base
+    ADDI x12, x0, 0x05      # Enable | INT_PENDING
+    SW x12, 8(x11)          # Clear interrupt
+    
+    # Restore registers
+    LW x10, 0(x2)
+    LW x11, 4(x2)
+    LW x12, 8(x2)
+    LW x13, 12(x2)
+    LW x14, 16(x2)
+    LW x1, 20(x2)
+    ADDI x2, x2, 32
+    
+    # Return from interrupt
+    MRET
 
 .data

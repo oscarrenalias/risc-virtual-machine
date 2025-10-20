@@ -54,6 +54,83 @@ uv run python main.py examples/hello.asm
 0xF0000 - 0xFFFFF: Memory-mapped I/O (64KB)
   0xF0000 - 0xF7CFF: Display buffer (80x25 characters)
   0xF7D00 - 0xF7D7F: Display control registers
+  0xF7E00 - 0xF7E10: Cycle-based timer registers
+  0xF7E20 - 0xF7E30: Real-time timer registers
+```
+
+## Timers and Interrupts
+
+The VM includes TWO hardware timers that can generate periodic interrupts:
+
+### 1. Cycle-Based Timer (Deterministic)
+
+Instruction-cycle based timing for deterministic behavior and testing.
+
+**Registers (Memory-Mapped):**
+```
+0xF7E00: TIMER_COUNTER   (R/W) - Current counter value
+0xF7E04: TIMER_COMPARE   (R/W) - Interrupt threshold
+0xF7E08: TIMER_CONTROL   (R/W) - Control register
+0xF7E0C: TIMER_PRESCALER (R/W) - Clock divider
+0xF7E10: TIMER_STATUS    (R)   - Status flags
+```
+
+**Control Register Bits:**
+- Bit 0: **ENABLE** - Enable timer
+- Bit 1: **MODE** - 0=one-shot, 1=periodic
+- Bit 2: **INT_PENDING** - Interrupt pending (write 1 to clear)
+- Bit 3: **AUTO_RELOAD** - Auto-reload counter in periodic mode
+
+### 2. Real-Time Timer (Wall-Clock Based)
+
+Wall-clock based timing for real-world event simulation (1 Hz - 1000 Hz).
+
+**Registers (Memory-Mapped):**
+```
+0xF7E20: RT_TIMER_COUNTER   (R)   - Ticks since start
+0xF7E24: RT_TIMER_FREQUENCY (R/W) - Frequency in Hz (1-1000)
+0xF7E28: RT_TIMER_CONTROL   (R/W) - Control register
+0xF7E2C: RT_TIMER_STATUS    (R)   - Status flags
+0xF7E30: RT_TIMER_COMPARE   (R/W) - Alarm compare value
+```
+
+**Control Register Bits:**
+- Bit 0: **ENABLE** - Enable timer
+- Bit 1: **MODE** - 0=periodic, 1=one-shot
+- Bit 2: **INT_PENDING** - Interrupt pending (write 1 to clear)
+- Bit 3: **ALARM_MODE** - Use compare for alarm
+
+### Control and Status Registers (CSRs)
+
+```
+0x300: mstatus  - Machine status (bit 3 = global interrupt enable)
+0x304: mie      - Interrupt enable (bit 7 = cycle timer, bit 11 = RT timer)
+0x305: mtvec    - Trap vector base address (interrupt handler)
+0x341: mepc     - Exception PC (saved PC during interrupt)
+0x342: mcause   - Trap cause (0x80000007 = cycle timer, 0x8000000B = RT timer)
+0x344: mip      - Interrupt pending flags
+```
+
+### Interrupt Programming
+
+**Cycle-Based Timer Example:**
+1. Set up interrupt handler address in `mtvec`
+2. Configure timer with compare value
+3. Enable cycle timer interrupt in `mie` (bit 7 = 0x80)
+4. Enable global interrupts in `mstatus` (bit 3 = 0x08)
+5. Implement handler that clears pending bit and uses `MRET`
+
+**Real-Time Timer Example:**
+1. Set up interrupt handler address in `mtvec`
+2. Configure RT timer frequency (1-1000 Hz)
+3. Enable RT timer interrupt in `mie` (bit 11 = 0x800)
+4. Enable global interrupts in `mstatus` (bit 3 = 0x08)
+5. Implement handler that clears pending bit and uses `MRET`
+
+**Examples:**
+- `examples/timer_test.asm` - Cycle-based timer test
+- `examples/rt_timer_test.asm` - Real-time timer test
+- `examples/clock.asm` - Real-time clock using RT timer at 1 Hz
 ```
 
 ## Instruction Set
@@ -117,8 +194,17 @@ uv run python main.py examples/hello.asm
 - `LUI rd, imm` - Load upper immediate
 - `AUIPC rd, imm` - Add upper immediate to PC
 
+### Control and Status Registers (CSR)
+- `CSRRW rd, csr, rs1` - Atomic Read/Write CSR
+- `CSRRS rd, csr, rs1` - Atomic Read and Set Bits in CSR
+- `CSRRC rd, csr, rs1` - Atomic Read and Clear Bits in CSR
+- `CSRRWI rd, csr, imm` - Read/Write CSR, immediate
+- `CSRRSI rd, csr, imm` - Read and Set Bits in CSR, immediate
+- `CSRRCI rd, csr, imm` - Read and Clear Bits in CSR, immediate
+
 ### System
 - `HALT` - Halt execution
+- `MRET` - Return from interrupt/exception
 - `NOP` - No operation
 
 ## Usage

@@ -180,6 +180,23 @@ class Assembler:
             elif opcode == 'NOP':
                 # NOP is encoded as ADDI x0, x0, 0
                 return Instruction('ADDI', inst_type, rd=0, rs1=0, imm=0)
+            elif opcode in ['CSRRW', 'CSRRS', 'CSRRC']:
+                # Format: CSRRW x1, 0x300, x2 (rd, csr, rs1)
+                if len(parts) < 4:
+                    raise AssemblerError(f"CSR instruction requires 3 operands: {line}")
+                rd = parse_register(parts[1])
+                csr = parse_immediate(parts[2])  # CSR address (e.g., 0x300)
+                rs1 = parse_register(parts[3])
+                return Instruction(opcode, inst_type, rd=rd, rs1=rs1, imm=csr)
+            elif opcode in ['CSRRWI', 'CSRRSI', 'CSRRCI']:
+                # Format: CSRRWI x1, 0x300, 5 (rd, csr, uimm)
+                if len(parts) < 4:
+                    raise AssemblerError(f"CSR immediate instruction requires 3 operands: {line}")
+                rd = parse_register(parts[1])
+                csr = parse_immediate(parts[2])  # CSR address
+                uimm = parse_immediate(parts[3])  # 5-bit unsigned immediate
+                # Store uimm in rs1 field for CSR immediate instructions
+                return Instruction(opcode, inst_type, rd=rd, rs1=uimm, imm=csr)
             else:
                 # Format: ADDI x1, x2, 100
                 if len(parts) < 4:
@@ -246,6 +263,11 @@ class Assembler:
             rd = parse_register(parts[1])
             imm = parse_immediate(parts[2])
             return Instruction(opcode, inst_type, rd=rd, imm=imm)
+        
+        elif inst_type == InstructionType.HALT:
+            # HALT and MRET take no operands
+            if opcode in ['HALT', 'MRET']:
+                return Instruction(opcode, inst_type)
         
         raise AssemblerError(f"Could not parse instruction: {line}")
     

@@ -6,6 +6,8 @@ Main execution engine that ties together CPU, Memory, Display, and Assembler
 from cpu import CPU
 from memory import Memory, MemoryAccessError, MemoryProtectionError
 from display import Display
+from timer import Timer
+from realtime_timer import RealTimeTimer
 from assembler import Assembler, AssemblerError
 from instruction import InstructionType
 
@@ -28,7 +30,9 @@ class VirtualMachine:
             protect_text: Protect text segment from writes
         """
         self.display = Display()
-        self.memory = Memory(display=self.display, protect_text=protect_text)
+        self.timer = Timer()
+        self.rt_timer = RealTimeTimer()
+        self.memory = Memory(display=self.display, timer=self.timer, rt_timer=self.rt_timer, protect_text=protect_text)
         self.cpu = CPU()
         self.assembler = Assembler()
         self.debug = debug
@@ -50,12 +54,14 @@ class VirtualMachine:
                 print(f"Assembled {len(self.instructions)} instructions")
                 print(f"Labels: {self.assembler.get_labels()}")
             
-            # Reset CPU
+            # Reset CPU and timers
             self.cpu.reset()
             self.cpu.pc = 0
+            self.timer.reset()
+            self.rt_timer.reset()
             
-            # Initialize stack pointer to top of stack
-            self.cpu.write_register(2, 0xBFFFF)  # x2 (sp)
+            # Initialize stack pointer to top of stack (must be 4-byte aligned)
+            self.cpu.write_register(2, 0xBFFFC)  # x2 (sp)
             
         except AssemblerError as e:
             raise VMError(f"Assembly error: {e}")
@@ -69,6 +75,29 @@ class VirtualMachine:
         """
         if self.cpu.halted:
             return False
+        
+        # Tick the cycle-based timer
+        if self.timer.tick():
+            # Cycle-based timer interrupt occurred
+            self.cpu.set_interrupt_pending(self.cpu.MIE_MTIE)
+        
+        # Check real-time timer
+        if self.rt_timer.check():
+            # Real-time timer interrupt occurred
+            self.cpu.set_interrupt_pending(self.cpu.MIE_RTIE)
+        
+        # Check for pending interrupts before fetching instruction
+        if self.cpu.has_pending_interrupts():
+            interrupt_code = self.cpu.get_highest_priority_interrupt()
+            if interrupt_code is not None:
+                if self.debug:
+                    print(f"\n*** Interrupt 0x{interrupt_code:08X} at PC=0x{self.cpu.pc:08X} ***")
+                self.cpu.enter_interrupt(interrupt_code)
+                # Clear appropriate interrupt pending bit
+                if interrupt_code == self.cpu.INT_TIMER:
+                    self.cpu.clear_interrupt_pending(self.cpu.MIE_MTIE)
+                elif interrupt_code == self.cpu.INT_TIMER_REALTIME:
+                    self.cpu.clear_interrupt_pending(self.cpu.MIE_RTIE)
         
         # Check if PC is valid
         instruction_index = self.cpu.pc // 4
@@ -165,9 +194,16 @@ class VirtualMachine:
         
         # System instructions
         elif instruction.type == InstructionType.HALT:
-            self.cpu.halt()
-            if self.debug:
-                print("CPU halted")
+            if opcode == 'HALT':
+                self.cpu.halt()
+                if self.debug:
+                    print("CPU halted")
+            elif opcode == 'MRET':
+                # Return from interrupt
+                self.cpu.return_from_interrupt()
+                if self.debug:
+                    print(f"Return from interrupt to PC=0x{self.cpu.pc:08X}")
+                return  # Don't increment PC, MRET sets it
         
         else:
             raise VMError(f"Unknown instruction type: {instruction.type}")
@@ -268,6 +304,43 @@ class VirtualMachine:
             b1 = self.memory.read_byte(addr + 1)
             value = b0 | (b1 << 8)
             self.cpu.write_register(inst.rd, value)
+        
+        # CSR instructions (imm field contains CSR address)
+        elif inst.opcode == 'CSRRW':
+            # Read CSR, write rs1 to CSR, return old value
+            csr_addr = inst.imm & 0xFFF
+            old_value = self.cpu.read_csr(csr_addr)
+            self.cpu.write_csr(csr_addr, rs1_val)
+            self.cpu.write_register(inst.rd, old_value)
+        elif inst.opcode == 'CSRRS':
+            # Read CSR, set bits from rs1, return old value
+            csr_addr = inst.imm & 0xFFF
+            old_value = self.cpu.set_csr_bits(csr_addr, rs1_val)
+            self.cpu.write_register(inst.rd, old_value)
+        elif inst.opcode == 'CSRRC':
+            # Read CSR, clear bits from rs1, return old value
+            csr_addr = inst.imm & 0xFFF
+            old_value = self.cpu.clear_csr_bits(csr_addr, rs1_val)
+            self.cpu.write_register(inst.rd, old_value)
+        elif inst.opcode == 'CSRRWI':
+            # Read CSR, write immediate (rs1 field) to CSR, return old value
+            csr_addr = inst.imm & 0xFFF
+            uimm = inst.rs1 & 0x1F  # rs1 field contains 5-bit immediate
+            old_value = self.cpu.read_csr(csr_addr)
+            self.cpu.write_csr(csr_addr, uimm)
+            self.cpu.write_register(inst.rd, old_value)
+        elif inst.opcode == 'CSRRSI':
+            # Read CSR, set bits from immediate, return old value
+            csr_addr = inst.imm & 0xFFF
+            uimm = inst.rs1 & 0x1F
+            old_value = self.cpu.set_csr_bits(csr_addr, uimm)
+            self.cpu.write_register(inst.rd, old_value)
+        elif inst.opcode == 'CSRRCI':
+            # Read CSR, clear bits from immediate, return old value
+            csr_addr = inst.imm & 0xFFF
+            uimm = inst.rs1 & 0x1F
+            old_value = self.cpu.clear_csr_bits(csr_addr, uimm)
+            self.cpu.write_register(inst.rd, old_value)
         else:
             raise VMError(f"Unknown I-type instruction: {inst.opcode}")
         
