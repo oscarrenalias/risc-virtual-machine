@@ -346,3 +346,124 @@ class TestLoopConstruct:
         """
         result = run_and_get_register(vm, program, 1)
         assert result == 15  # 1+2+3+4+5 = 15
+
+
+class TestMultiplyDivideInstructions:
+    """Test M-extension multiply and divide instructions"""
+    
+    def test_mul_basic(self, vm):
+        """Test MUL instruction basic multiplication"""
+        program = """
+        ADDI x1, x0, 6
+        ADDI x2, x0, 7
+        MUL x3, x1, x2
+        HALT
+        """
+        result = run_and_get_register(vm, program, 3)
+        assert result == 42
+    
+    def test_mul_negative(self, vm):
+        """Test MUL with negative numbers"""
+        program = """
+        ADDI x1, x0, -6
+        ADDI x2, x0, 7
+        MUL x3, x1, x2
+        HALT
+        """
+        result = run_and_get_register(vm, program, 3)
+        assert vm.cpu.to_signed(result) == -42
+    
+    def test_div_basic(self, vm):
+        """Test DIV instruction basic division"""
+        program = """
+        ADDI x1, x0, 42
+        ADDI x2, x0, 7
+        DIV x3, x1, x2
+        HALT
+        """
+        result = run_and_get_register(vm, program, 3)
+        assert result == 6
+    
+    def test_div_by_zero(self, vm):
+        """Test DIV by zero returns -1"""
+        program = """
+        ADDI x1, x0, 42
+        ADDI x2, x0, 0
+        DIV x3, x1, x2
+        HALT
+        """
+        result = run_and_get_register(vm, program, 3)
+        assert result == 0xFFFFFFFF
+    
+    def test_divu_basic(self, vm):
+        """Test DIVU instruction unsigned division"""
+        program = """
+        ADDI x1, x0, 42
+        ADDI x2, x0, 7
+        DIVU x3, x1, x2
+        HALT
+        """
+        result = run_and_get_register(vm, program, 3)
+        assert result == 6
+    
+    def test_divu_by_zero(self, vm):
+        """Test DIVU by zero returns 2^32-1"""
+        program = """
+        ADDI x1, x0, 42
+        ADDI x2, x0, 0
+        DIVU x3, x1, x2
+        HALT
+        """
+        result = run_and_get_register(vm, program, 3)
+        assert result == 0xFFFFFFFF
+    
+    def test_rem_basic(self, vm):
+        """Test REM instruction basic remainder"""
+        program = """
+        ADDI x1, x0, 23
+        ADDI x2, x0, 5
+        REM x3, x1, x2
+        HALT
+        """
+        result = run_and_get_register(vm, program, 3)
+        assert result == 3
+    
+    def test_rem_negative(self, vm):
+        """Test REM with negative dividend"""
+        program = """
+        ADDI x1, x0, -23
+        ADDI x2, x0, 5
+        REM x3, x1, x2
+        HALT
+        """
+        result = run_and_get_register(vm, program, 3)
+        assert vm.cpu.to_signed(result) == -3
+    
+    def test_remu_basic(self, vm):
+        """Test REMU instruction unsigned remainder"""
+        program = """
+        ADDI x1, x0, 23
+        ADDI x2, x0, 5
+        REMU x3, x1, x2
+        HALT
+        """
+        result = run_and_get_register(vm, program, 3)
+        assert result == 3
+    
+    def test_div_rem_combination(self, vm):
+        """Test DIV and REM together verify dividend = quotient*divisor + remainder"""
+        program = """
+        ADDI x1, x0, 23       # dividend
+        ADDI x2, x0, 5        # divisor
+        DIV x3, x1, x2        # quotient
+        REM x4, x1, x2        # remainder
+        HALT
+        """
+        run_program_until_halt(vm, program)
+        quotient = vm.cpu.read_register(3)
+        remainder = vm.cpu.read_register(4)
+        assert quotient == 4
+        assert remainder == 3
+        # Verify formula
+        assert 23 == quotient * 5 + remainder
+

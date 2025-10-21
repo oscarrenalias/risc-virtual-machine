@@ -87,6 +87,13 @@ INSTRUCTION_SET = {
     'SLT': InstructionType.R_TYPE,  # Set less than
     'SLTU': InstructionType.R_TYPE, # Set less than unsigned
     
+    # M-extension: Multiply/Divide (R-type)
+    'MUL': InstructionType.R_TYPE,   # Multiply (lower 32 bits)
+    'DIV': InstructionType.R_TYPE,   # Divide (signed)
+    'DIVU': InstructionType.R_TYPE,  # Divide (unsigned)
+    'REM': InstructionType.R_TYPE,   # Remainder (signed)
+    'REMU': InstructionType.R_TYPE,  # Remainder (unsigned)
+    
     # I-type instructions (immediate)
     'ADDI': InstructionType.I_TYPE,
     'ANDI': InstructionType.I_TYPE,

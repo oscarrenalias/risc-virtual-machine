@@ -486,3 +486,163 @@ class TestRealWorldProgram:
         
         result = run_and_get_register(vm, program, 10)
         assert result == 5  # "Hello" length
+
+
+class TestMultiplyDividePrograms:
+    """Test complete programs using M-extension instructions"""
+    
+    def test_factorial_with_mul(self, vm):
+        """Test factorial using MUL instruction"""
+        program = """
+        # Factorial using multiplication
+        ADDI x1, x0, 6       # n = 6
+        ADDI x2, x0, 1       # result = 1
+        ADDI x3, x0, 1       # i = 1
+    loop:
+        BLT x1, x3, done     # if i > n, done
+        MUL x2, x2, x3       # result *= i
+        ADDI x3, x3, 1       # i++
+        JAL x0, loop
+    done:
+        HALT
+        """
+        result = run_and_get_register(vm, program, 2)
+        assert result == 720  # 6! = 720
+    
+    def test_gcd_euclidean(self, vm):
+        """Test GCD using Euclidean algorithm with REM"""
+        program = """
+        # GCD using Euclidean algorithm
+        ADDI x1, x0, 48      # a = 48
+        ADDI x2, x0, 18      # b = 18
+    loop:
+        BEQ x2, x0, done     # if b == 0, done
+        REM x3, x1, x2       # temp = a % b
+        ADDI x1, x2, 0       # a = b
+        ADDI x2, x3, 0       # b = temp
+        JAL x0, loop
+    done:
+        # Result in x1
+        HALT
+        """
+        result = run_and_get_register(vm, program, 1)
+        assert result == 6  # GCD(48, 18) = 6
+    
+    def test_power_computation(self, vm):
+        """Test exponentiation: compute 3^4"""
+        program = """
+        # Compute base^exponent
+        ADDI x1, x0, 3       # base = 3
+        ADDI x2, x0, 4       # exponent = 4
+        ADDI x3, x0, 1       # result = 1
+        ADDI x4, x0, 0       # counter = 0
+    loop:
+        BEQ x4, x2, done     # if counter == exponent, done
+        MUL x3, x3, x1       # result *= base
+        ADDI x4, x4, 1       # counter++
+        JAL x0, loop
+    done:
+        HALT
+        """
+        result = run_and_get_register(vm, program, 3)
+        assert result == 81  # 3^4 = 81
+    
+    def test_division_verification(self, vm):
+        """Test that quotient and remainder satisfy dividend = q*d + r"""
+        program = """
+        # Verify division identity
+        ADDI x1, x0, 100     # dividend
+        ADDI x2, x0, 7       # divisor
+        DIV x3, x1, x2       # quotient
+        REM x4, x1, x2       # remainder
+        
+        # Verify: dividend = quotient * divisor + remainder
+        MUL x5, x3, x2       # q * d
+        ADD x5, x5, x4       # q * d + r
+        # x5 should equal x1 (100)
+        HALT
+        """
+        run_program_until_halt(vm, program)
+        dividend = vm.cpu.read_register(1)
+        verify = vm.cpu.read_register(5)
+        assert dividend == verify == 100
+    
+    def test_average_calculation(self, vm):
+        """Test computing average of numbers using DIV"""
+        program = """
+        # Calculate average of 5 numbers: 10, 20, 30, 40, 50
+        ADDI x1, x0, 10
+        ADDI x2, x0, 20
+        ADDI x3, x0, 30
+        ADDI x4, x0, 40
+        ADDI x5, x0, 50
+        
+        # Sum them
+        ADD x10, x1, x2
+        ADD x10, x10, x3
+        ADD x10, x10, x4
+        ADD x10, x10, x5    # sum = 150
+        
+        # Divide by count
+        ADDI x11, x0, 5     # count = 5
+        DIV x12, x10, x11   # average = 150 / 5 = 30
+        HALT
+        """
+        result = run_and_get_register(vm, program, 12)
+        assert result == 30
+    
+    def test_modulo_arithmetic(self, vm):
+        """Test modulo operation for wrap-around (e.g., circular buffer)"""
+        program = """
+        # Simulate circular buffer indexing (0-9)
+        ADDI x1, x0, 10      # buffer size
+        ADDI x2, x0, 0       # start index
+        
+        # Add 7 to index
+        ADDI x2, x2, 7       # index = 7
+        REMU x3, x2, x1      # wrap: 7 % 10 = 7
+        
+        # Add 5 more (should wrap)
+        ADDI x2, x2, 5       # index = 12
+        REMU x4, x2, x1      # wrap: 12 % 10 = 2
+        
+        # Add 20 more
+        ADDI x2, x2, 20      # index = 32
+        REMU x5, x2, x1      # wrap: 32 % 10 = 2
+        HALT
+        """
+        run_program_until_halt(vm, program)
+        assert vm.cpu.read_register(3) == 7
+        assert vm.cpu.read_register(4) == 2
+        assert vm.cpu.read_register(5) == 2
+    
+    def test_prime_check_simple(self, vm):
+        """Test simple primality check using REM"""
+        program = """
+        # Check if 17 is prime
+        ADDI x1, x0, 17      # number to check
+        ADDI x2, x0, 2       # divisor
+        ADDI x10, x0, 1      # assume prime (1 = true)
+        
+    loop:
+        # Check if divisor^2 > n
+        MUL x3, x2, x2       # divisor^2
+        BLT x1, x3, done     # if n < divisor^2, done
+        
+        # Check if divisible
+        REM x4, x1, x2       # n % divisor
+        BEQ x4, x0, not_prime # if remainder == 0, not prime
+        
+        # Next divisor
+        ADDI x2, x2, 1
+        JAL x0, loop
+        
+    not_prime:
+        ADDI x10, x0, 0      # not prime (0 = false)
+        
+    done:
+        HALT
+        """
+        result = run_and_get_register(vm, program, 10)
+        assert result == 1  # 17 is prime
+

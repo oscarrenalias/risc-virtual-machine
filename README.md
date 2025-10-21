@@ -192,77 +192,27 @@ ADDI x1, x2, 10    # Inline comment
 
 ## Instruction Set
 
-### Arithmetic (R-type)
-- `ADD rd, rs1, rs2` - Add
-- `SUB rd, rs1, rs2` - Subtract
-- `SLT rd, rs1, rs2` - Set less than (signed)
-- `SLTU rd, rs1, rs2` - Set less than (unsigned)
+The VM implements a subset of the RISC-V instruction set including:
 
-### Arithmetic Immediate (I-type)
-- `ADDI rd, rs1, imm` - Add immediate
-- `SLTI rd, rs1, imm` - Set less than immediate
-- `SLTIU rd, rs1, imm` - Set less than immediate unsigned
+- **Base Integer Instructions (RV32I)**: Arithmetic, logical, shift, memory, branch, jump
+- **M-Extension (Multiply/Divide)**: MUL, DIV, DIVU, REM, REMU ✨ NEW
+- **CSR Instructions**: Control and Status Register operations
+- **Privileged Instructions**: MRET for interrupt handling
 
-### Logical (R-type)
-- `AND rd, rs1, rs2` - Bitwise AND
-- `OR rd, rs1, rs2` - Bitwise OR
-- `XOR rd, rs1, rs2` - Bitwise XOR
+For the complete instruction set reference, see [docs/INSTRUCTION_SET.md](docs/INSTRUCTION_SET.md)
 
-### Logical Immediate (I-type)
-- `ANDI rd, rs1, imm` - AND immediate
-- `ORI rd, rs1, imm` - OR immediate
-- `XORI rd, rs1, imm` - XOR immediate
+### Example Programs Using M-Extension
 
-### Shift (R-type)
-- `SLL rd, rs1, rs2` - Shift left logical
-- `SRL rd, rs1, rs2` - Shift right logical
-- `SRA rd, rs1, rs2` - Shift right arithmetic
+```bash
+# Multiplication examples
+./run.sh examples/multiply.asm
 
-### Shift Immediate (I-type)
-- `SLLI rd, rs1, shamt` - Shift left logical immediate
-- `SRLI rd, rs1, shamt` - Shift right logical immediate
-- `SRAI rd, rs1, shamt` - Shift right arithmetic immediate
+# Division and remainder examples
+./run.sh examples/division.asm
 
-### Memory Load (I-type)
-- `LW rd, offset(rs1)` - Load word
-- `LH rd, offset(rs1)` - Load halfword
-- `LB rd, offset(rs1)` - Load byte
-- `LHU rd, offset(rs1)` - Load halfword unsigned
-- `LBU rd, offset(rs1)` - Load byte unsigned
-
-### Memory Store (S-type)
-- `SW rs2, offset(rs1)` - Store word
-- `SH rs2, offset(rs1)` - Store halfword
-- `SB rs2, offset(rs1)` - Store byte
-
-### Branch (B-type)
-- `BEQ rs1, rs2, label` - Branch if equal
-- `BNE rs1, rs2, label` - Branch if not equal
-- `BLT rs1, rs2, label` - Branch if less than
-- `BGE rs1, rs2, label` - Branch if greater or equal
-- `BLTU rs1, rs2, label` - Branch if less than unsigned
-- `BGEU rs1, rs2, label` - Branch if greater or equal unsigned
-
-### Jump (J-type)
-- `JAL rd, label` - Jump and link
-- `JALR rd, rs1, offset` - Jump and link register
-
-### Upper Immediate (U-type)
-- `LUI rd, imm` - Load upper immediate
-- `AUIPC rd, imm` - Add upper immediate to PC
-
-### Control and Status Registers (CSR)
-- `CSRRW rd, csr, rs1` - Atomic Read/Write CSR
-- `CSRRS rd, csr, rs1` - Atomic Read and Set Bits in CSR
-- `CSRRC rd, csr, rs1` - Atomic Read and Clear Bits in CSR
-- `CSRRWI rd, csr, imm` - Read/Write CSR, immediate
-- `CSRRSI rd, csr, imm` - Read and Set Bits in CSR, immediate
-- `CSRRCI rd, csr, imm` - Read and Clear Bits in CSR, immediate
-
-### System
-- `HALT` - Halt execution
-- `MRET` - Return from interrupt/exception
-- `NOP` - No operation
+# Prime number checker using MUL and REM
+./run.sh examples/prime_check.asm
+```
 
 ## Usage
 
@@ -328,6 +278,15 @@ Calculates 5! = 120.
 
 ### Test (`examples/test.asm`)
 Tests various instruction types.
+
+### Multiply (`examples/multiply.asm`) ✨ NEW
+Demonstrates MUL instruction with power calculation (2^5 = 32).
+
+### Division (`examples/division.asm`) ✨ NEW
+Shows DIV, DIVU, REM, REMU instructions with signed/unsigned examples.
+
+### Prime Check (`examples/prime_check.asm`) ✨ NEW
+Prime number checker using MUL and REM instructions.
 
 ## Writing Assembly Programs
 
@@ -529,7 +488,8 @@ See [tests/README.md](tests/README.md) and [docs/PROGRAM_TESTING.md](docs/PROGRA
 
 ## Future Enhancements
 
-- [ ] Multiply and divide instructions
+- [X] Multiply and divide instructions (MUL, DIV, DIVU, REM, REMU implemented)
+- [ ] High multiply instructions (MULH, MULHSU, MULHU - Phase 3 of M-extension)
 - [ ] Floating-point support
 - [ ] System calls for I/O
 - [ ] Graphics mode display
@@ -539,3 +499,4 @@ See [tests/README.md](tests/README.md) and [docs/PROGRAM_TESTING.md](docs/PROGRA
 - [ ] Debugger GUI
 - [ ] Multiple display pages
 - [ ] Color support
+```

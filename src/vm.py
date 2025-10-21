@@ -283,6 +283,56 @@ class VirtualMachine:
             result = 1 if self.cpu.to_signed(rs1_val) < self.cpu.to_signed(rs2_val) else 0
         elif inst.opcode == 'SLTU':
             result = 1 if rs1_val < rs2_val else 0
+        # M-extension: Multiply/Divide
+        elif inst.opcode == 'MUL':
+            # Multiply - return lower 32 bits
+            signed_rs1 = self.cpu.to_signed(rs1_val)
+            signed_rs2 = self.cpu.to_signed(rs2_val)
+            product = signed_rs1 * signed_rs2
+            result = product & 0xFFFFFFFF
+        elif inst.opcode == 'DIV':
+            # Signed division
+            signed_rs1 = self.cpu.to_signed(rs1_val)
+            signed_rs2 = self.cpu.to_signed(rs2_val)
+            if signed_rs2 == 0:
+                # Division by zero: return -1
+                result = 0xFFFFFFFF
+            elif signed_rs1 == -2147483648 and signed_rs2 == -1:
+                # Overflow case: -2^31 / -1 would be 2^31 (overflow)
+                result = 0x80000000
+            else:
+                # Python's // rounds toward negative infinity, but RISC-V rounds toward zero
+                quotient = int(signed_rs1 / signed_rs2)
+                result = self.cpu.to_unsigned(quotient)
+        elif inst.opcode == 'DIVU':
+            # Unsigned division
+            if rs2_val == 0:
+                # Division by zero: return 2^32-1
+                result = 0xFFFFFFFF
+            else:
+                result = rs1_val // rs2_val
+        elif inst.opcode == 'REM':
+            # Signed remainder
+            signed_rs1 = self.cpu.to_signed(rs1_val)
+            signed_rs2 = self.cpu.to_signed(rs2_val)
+            if signed_rs2 == 0:
+                # Division by zero: return dividend
+                result = rs1_val
+            elif signed_rs1 == -2147483648 and signed_rs2 == -1:
+                # Overflow case: remainder is 0
+                result = 0
+            else:
+                # Python's % has different semantics, use actual formula
+                quotient = int(signed_rs1 / signed_rs2)
+                remainder = signed_rs1 - (quotient * signed_rs2)
+                result = self.cpu.to_unsigned(remainder)
+        elif inst.opcode == 'REMU':
+            # Unsigned remainder
+            if rs2_val == 0:
+                # Division by zero: return dividend
+                result = rs1_val
+            else:
+                result = rs1_val % rs2_val
         else:
             raise VMError(f"Unknown R-type instruction: {inst.opcode}")
         
