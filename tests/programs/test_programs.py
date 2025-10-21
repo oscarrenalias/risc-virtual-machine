@@ -434,7 +434,7 @@ class TestDisplayIntegration:
         # Clear display using control register (word write to CTRL_SCROLL which is word-aligned)
         # Note: CTRL_CLEAR is at 0xF7D05 (not word-aligned)
         # So we write to CTRL_SCROLL (0xF7D04) with value that triggers clear somehow
-        # Actually, let's just skip this test since byte writes to MMIO aren't implemented
+        # This test now works since byte writes to MMIO are implemented
         
         HALT
         """

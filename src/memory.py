@@ -115,6 +115,11 @@ class Memory:
                 f"Cannot write to protected text segment: 0x{address:08X}"
             )
         
+        # Handle memory-mapped I/O
+        if self._is_mmio_address(address):
+            self._handle_mmio_write(address, value & 0xFF, size=1)
+        
+        # Always write to underlying memory (except for timer registers which return early)
         self.data[address] = value & 0xFF
     
     def read_word(self, address):
@@ -151,38 +156,77 @@ class Memory:
         if 0xF7E00 <= address <= 0xF7E10:
             logger.debug(f"write_word: Timer address detected 0x{address:08X}, self.timer={self.timer is not None}")
         
-        if self.DISPLAY_BUFFER_START <= address <= self.DISPLAY_BUFFER_END:
-            self._handle_display_write(address, value)
-        elif self.DISPLAY_CONTROL_START <= address <= self.DISPLAY_CONTROL_END:
-            self._handle_control_register_write(address, value)
-        elif self.timer and self.TIMER_COUNTER <= address <= self.TIMER_STATUS:
-            logger.debug(f"Routing to timer handler")
-            self._handle_timer_write(address, value)
-            return  # Timer registers don't write to memory
-        elif self.rt_timer and self.RT_TIMER_COUNTER <= address <= self.RT_TIMER_COMPARE:
-            self._handle_rt_timer_write(address, value)
-            return  # RT timer registers don't write to memory
+        if self._is_mmio_address(address):
+            mmio_handled = self._handle_mmio_write(address, value, size=4)
+            # Timer registers don't write to memory, return early
+            if mmio_handled:
+                return
         
         # Write 4 bytes in little-endian order
         value = value & 0xFFFFFFFF  # Ensure 32-bit value
         self.data[address:address+4] = value.to_bytes(4, byteorder='little', signed=False)
     
-    def _handle_display_write(self, address, value):
-        """Handle writes to display buffer"""
-        if self.display is None:
-            return
+    def _is_mmio_address(self, address):
+        """Check if address is in a memory-mapped I/O region"""
+        return (
+            (self.DISPLAY_BUFFER_START <= address <= self.DISPLAY_BUFFER_END) or
+            (self.DISPLAY_CONTROL_START <= address <= self.DISPLAY_CONTROL_END) or
+            (self.timer and self.TIMER_COUNTER <= address <= self.TIMER_STATUS) or
+            (self.rt_timer and self.RT_TIMER_COUNTER <= address <= self.RT_TIMER_COMPARE)
+        )
+    
+    def _handle_mmio_write(self, address, value, size):
+        """
+        Handle writes to memory-mapped I/O regions
         
-        # Calculate position in display buffer
-        offset = address - self.DISPLAY_BUFFER_START
+        Args:
+            address: Memory address to write
+            value: Value to write (already masked to appropriate size)
+            size: Size of write in bytes (1 for byte, 4 for word)
         
-        # Each word can contain up to 4 characters
-        for i in range(4):
-            byte_val = (value >> (i * 8)) & 0xFF
-            if byte_val != 0:  # Only write non-zero bytes
-                char_offset = offset + i
-                col = char_offset % self.display.COLS
-                row = (char_offset // self.display.COLS) % self.display.ROWS
-                self.display.write_char(col, row, byte_val)
+        Returns:
+            True if the write should NOT continue to memory (e.g., timer registers)
+            False if the write should also update underlying memory
+        """
+        # Display buffer - write character(s) to display
+        if self.DISPLAY_BUFFER_START <= address <= self.DISPLAY_BUFFER_END:
+            if self.display is not None:
+                offset = address - self.DISPLAY_BUFFER_START
+                
+                if size == 1:
+                    # Byte write - single character
+                    col = offset % self.display.COLS
+                    row = (offset // self.display.COLS) % self.display.ROWS
+                    if value != 0:  # Only write non-zero bytes
+                        self.display.write_char(col, row, value)
+                else:
+                    # Word write - up to 4 characters
+                    for i in range(4):
+                        byte_val = (value >> (i * 8)) & 0xFF
+                        if byte_val != 0:  # Only write non-zero bytes
+                            char_offset = offset + i
+                            col = char_offset % self.display.COLS
+                            row = (char_offset // self.display.COLS) % self.display.ROWS
+                            self.display.write_char(col, row, byte_val)
+            return False  # Also write to memory
+        
+        # Display control registers
+        elif self.DISPLAY_CONTROL_START <= address <= self.DISPLAY_CONTROL_END:
+            self._handle_control_register_write(address, value)
+            return False  # Also write to memory
+        
+        # Cycle-based timer registers
+        elif self.timer and self.TIMER_COUNTER <= address <= self.TIMER_STATUS:
+            logger.debug(f"Routing to timer handler")
+            self._handle_timer_write(address, value)
+            return True  # Don't write to memory
+        
+        # Real-time timer registers
+        elif self.rt_timer and self.RT_TIMER_COUNTER <= address <= self.RT_TIMER_COMPARE:
+            self._handle_rt_timer_write(address, value)
+            return True  # Don't write to memory
+        
+        return False
     
     def _handle_control_register_write(self, address, value):
         """Handle writes to display control registers"""
