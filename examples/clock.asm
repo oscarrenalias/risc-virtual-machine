@@ -66,10 +66,12 @@ display_clock:
 
 div_h_tens:
     # Display hours tens digit at (30, 38)
-    # Calculate offset: row * 80 + col
+    # Calculate offset: (row * 80 + col) * 4 (word-aligned)
     ADDI x16, x0, 80
     MUL x17, x11, x16       # row * 80
     ADD x17, x17, x12       # + col
+    ADDI x18, x0, 4
+    MUL x17, x17, x18       # * 4 for word alignment
     ADD x17, x17, x10       # + display base
     SW x15, 0(x17)
     
@@ -83,6 +85,7 @@ div_m_tens:
     # Display hours ones digit
     MUL x17, x11, x16
     ADD x17, x17, x12
+    MUL x17, x17, x18       # * 4 for word alignment
     ADD x17, x17, x10
     SW x15, 0(x17)
     
@@ -94,6 +97,7 @@ div_m_tens:
 div_s_tens:
     MUL x17, x11, x16
     ADD x17, x17, x12
+    MUL x17, x17, x18       # * 4 for word alignment
     ADD x17, x17, x10
     SW x15, 0(x17)
     
@@ -105,6 +109,7 @@ div_s_tens:
     
     MUL x17, x11, x16
     ADD x17, x17, x12
+    MUL x17, x17, x18       # * 4 for word alignment
     ADD x17, x17, x10
     SW x15, 0(x17)
     
@@ -115,6 +120,7 @@ div_s_tens:
     
     MUL x17, x11, x16
     ADD x17, x17, x12
+    MUL x17, x17, x18       # * 4 for word alignment
     ADD x17, x17, x10
     SW x15, 0(x17)
     
@@ -124,6 +130,7 @@ div_s_tens:
     
     MUL x17, x11, x16
     ADD x17, x17, x12
+    MUL x17, x17, x18       # * 4 for word alignment
     ADD x17, x17, x10
     SW x15, 0(x17)
     
@@ -135,6 +142,7 @@ div_s_tens:
     
     MUL x17, x11, x16
     ADD x17, x17, x12
+    MUL x17, x17, x18       # * 4 for word alignment
     ADD x17, x17, x10
     SW x15, 0(x17)
     
@@ -145,6 +153,7 @@ div_s_tens:
     
     MUL x17, x11, x16
     ADD x17, x17, x12
+    MUL x17, x17, x18       # * 4 for word alignment
     ADD x17, x17, x10
     SW x15, 0(x17)
     
