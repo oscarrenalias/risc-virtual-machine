@@ -94,5 +94,4 @@ jobs:
         else
           echo "❌ Tests failed - check logs above for details" >> $GITHUB_STEP_SUMMARY
         fi
-          echo "❌ Tests failed - check logs above for details" >> $GITHUB_STEP_SUMMARY
-        fi
+
