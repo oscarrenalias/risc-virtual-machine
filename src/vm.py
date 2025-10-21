@@ -7,6 +7,7 @@ import logging
 from typing import Optional
 
 from .cpu import CPU
+from .cpu_clock import CPUClock
 from .memory import Memory, MemoryAccessError, MemoryProtectionError
 from .display import Display
 from .timer import Timer
@@ -72,19 +73,22 @@ class VirtualMachine:
     Executes RISC assembly programs with memory-mapped display
     """
     
-    def __init__(self, debug=False, protect_text=False):
+    def __init__(self, debug=False, protect_text=False, cpu_clock_hz=1000, enable_clock=True):
         """
         Initialize the virtual machine
         
         Args:
             debug: Enable debug output
             protect_text: Protect text segment from writes
+            cpu_clock_hz: CPU clock frequency in Hz (1-10000). Default: 1000 Hz (1 kHz)
+            enable_clock: If False, run at maximum speed (no clock delays). Default: True
         """
         self.display = Display()
         self.timer = Timer()
         self.rt_timer = RealTimeTimer()
         self.memory = Memory(display=self.display, timer=self.timer, rt_timer=self.rt_timer, protect_text=protect_text)
         self.cpu = CPU()
+        self.cpu_clock = CPUClock(frequency_hz=cpu_clock_hz, enabled=enable_clock)
         self.assembler = Assembler()
         self.debug = debug
         self.breakpoints = set()
@@ -110,6 +114,7 @@ class VirtualMachine:
             self.cpu.pc = 0
             self.timer.reset()
             self.rt_timer.reset()
+            self.cpu_clock.reset()
             
             # Initialize stack pointer to top of stack (must be 4-byte aligned)
             self.cpu.write_register(2, 0xBFFFC)  # x2 (sp)
@@ -169,10 +174,9 @@ class VirtualMachine:
             if self.debug:
                 logger.debug(f"[0x{self.cpu.pc:08X}] (waiting for interrupt)")
             
-            # Add small sleep to allow real-time to pass for RT timer
-            # This prevents burning through instruction limit while waiting
-            import time
-            time.sleep(0.00001)  # 10 microseconds - allows RT timer to fire
+            # Tick CPU clock to maintain timing even during WFI
+            # This allows real-time timer to work correctly
+            self.cpu_clock.tick()
             
             return True
         
@@ -231,6 +235,9 @@ class VirtualMachine:
                 original_exception=e
             )
         
+        # Tick the CPU clock to enforce timing
+        self.cpu_clock.tick()
+        
         return not self.cpu.halted
     
     def run(self, max_instructions=1000000, live_display=False, update_interval=10000, visualizer=None):
@@ -240,7 +247,7 @@ class VirtualMachine:
         Args:
             max_instructions: Maximum number of instructions to execute
             live_display: If True, update display during execution
-            update_interval: Number of instructions between display updates
+            update_interval: Number of instructions between display updates (auto-adjusted for clock speed)
             visualizer: Optional VMVisualizer instance for enhanced display
             
         Returns:
@@ -251,6 +258,20 @@ class VirtualMachine:
         
         # Use visualizer if provided, otherwise use legacy display
         use_visualizer = visualizer is not None and visualizer.can_show_split
+        
+        # Adjust update interval based on clock speed for better responsiveness
+        # At low clock speeds, update more frequently so user sees progress
+        if self.cpu_clock.enabled and live_display:
+            if self.cpu_clock.frequency <= 10:
+                # Very slow: update every instruction
+                update_interval = 1
+            elif self.cpu_clock.frequency <= 100:
+                # Slow: update every 10 instructions
+                update_interval = 10
+            elif self.cpu_clock.frequency <= 1000:
+                # Medium: update every 100 instructions
+                update_interval = 100
+            # else: use provided update_interval (for fast clocks or no clock)
         
         if live_display and not use_visualizer:
             # Legacy mode: Clear screen and hide cursor

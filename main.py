@@ -134,6 +134,10 @@ def main():
                        help='Show CPU state panel alongside display (requires wide terminal)')
     parser.add_argument('--min-width', type=int, default=140,
                        help='Minimum terminal width for CPU view (default: 140)')
+    parser.add_argument('--clock-hz', type=int, default=1000,
+                       help='CPU clock frequency in Hz (1-10000, default: 1000)')
+    parser.add_argument('--no-clock', action='store_true',
+                       help='Disable CPU clock for maximum speed execution')
     
     args = parser.parse_args()
     
@@ -161,7 +165,19 @@ def main():
         return 1
     
     # Create and configure VM
-    vm = VirtualMachine(debug=args.debug, protect_text=args.protect)
+    enable_clock = not args.no_clock
+    vm = VirtualMachine(
+        debug=args.debug, 
+        protect_text=args.protect,
+        cpu_clock_hz=args.clock_hz,
+        enable_clock=enable_clock
+    )
+    
+    # Print clock info if enabled
+    if enable_clock and not args.debug:
+        print(f"CPU clock: {args.clock_hz} Hz ({1000.0/args.clock_hz:.3f} ms per instruction)")
+    elif not enable_clock:
+        print("CPU clock: disabled (maximum speed)")
     
     try:
         # Load program

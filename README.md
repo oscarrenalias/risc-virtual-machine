@@ -30,6 +30,11 @@ uv run python main.py examples/hello.asm
 # Enable debug mode
 ./run.sh -d examples/counter.asm
 
+# Control CPU speed (NEW!)
+./run.sh examples/hello.asm --clock-hz 100     # 100 Hz (slow motion)
+./run.sh examples/hello.asm --clock-hz 10000   # 10 kHz (fast)
+./run.sh examples/hello.asm --no-clock         # Maximum speed
+
 # Step through execution with CPU visualization (NEW!)
 ./run.sh -s --cpu-view examples/test.asm
 
@@ -42,6 +47,11 @@ uv run python main.py examples/hello.asm
 - **32-bit RISC Architecture**: Based on RISC-V instruction set
 - **32 General-Purpose Registers**: x0-x31 (x0 hardwired to zero)
 - **Label Support**: Use labels directly in instructions instead of manual address calculation
+- **Configurable CPU Clock**: Simulate real CPU execution speed (1 Hz - 10 kHz, or unlimited) (NEW!)
+  - Default 1 kHz (1ms per instruction)
+  - Educational tool for understanding code optimization impact
+  - Can be disabled for maximum speed
+  - See [CPU_CLOCK.md](docs/CPU_CLOCK.md) for details
 - **1MB Memory**: 
   - Text segment (64KB)
   - Data segment (192KB)
