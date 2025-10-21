@@ -154,7 +154,7 @@ class VirtualMachine:
         
         return not self.cpu.halted
     
-    def run(self, max_instructions=1000000, live_display=False, update_interval=10000):
+    def run(self, max_instructions=1000000, live_display=False, update_interval=10000, visualizer=None):
         """
         Run the program until halt or max instructions
         
@@ -162,6 +162,7 @@ class VirtualMachine:
             max_instructions: Maximum number of instructions to execute
             live_display: If True, update display during execution
             update_interval: Number of instructions between display updates
+            visualizer: Optional VMVisualizer instance for enhanced display
             
         Returns:
             Number of instructions executed
@@ -169,8 +170,11 @@ class VirtualMachine:
         import sys
         count = 0
         
-        if live_display:
-            # Clear screen and hide cursor
+        # Use visualizer if provided, otherwise use legacy display
+        use_visualizer = visualizer is not None and visualizer.can_show_split
+        
+        if live_display and not use_visualizer:
+            # Legacy mode: Clear screen and hide cursor
             print("\033[2J\033[?25l", end='', flush=True)
         
         try:
@@ -179,17 +183,21 @@ class VirtualMachine:
                 
                 # Update display periodically if live display is enabled
                 if live_display and count % update_interval == 0:
-                    # Move cursor to home position and render
-                    print("\033[H", end='', flush=True)
-                    self.display.render()
-                    print(f"\nInstructions: {count:,}", flush=True)
+                    if use_visualizer:
+                        # Use new visualizer with CPU panel
+                        visualizer.render_live_mode_update(count)
+                    else:
+                        # Legacy display only
+                        print("\033[H", end='', flush=True)
+                        self.display.render()
+                        print(f"\nInstructions: {count:,}", flush=True)
             
             if count >= max_instructions:
                 if not live_display:
                     logger.warning(f"Execution stopped after {max_instructions} instructions")
         finally:
-            if live_display:
-                # Show cursor again
+            if live_display and not use_visualizer:
+                # Show cursor again (legacy mode)
                 print("\033[?25h", end='', flush=True)
         
         return count
@@ -499,3 +507,96 @@ class VirtualMachine:
         print("\n" + "="*70)
         print(self.cpu.dump_registers())
         print("="*70)
+    
+    def get_current_instruction(self):
+        """
+        Get the instruction at the current PC
+        
+        Returns:
+            Instruction object or None if PC is out of bounds
+        """
+        # PC is byte address, instructions are stored sequentially
+        index = self.cpu.pc // 4
+        if 0 <= index < len(self.instructions):
+            return self.instructions[index]
+        return None
+    
+    def get_current_instruction_text(self):
+        """
+        Get human-readable text of instruction at current PC
+        
+        Returns:
+            String representation of instruction or "???" if invalid
+        """
+        instruction = self.get_current_instruction()
+        if instruction:
+            return self._format_instruction(instruction)
+        return "???"
+    
+    def get_instruction_at_address(self, address):
+        """
+        Get instruction at a specific address
+        
+        Args:
+            address: Memory address (byte address)
+            
+        Returns:
+            Instruction object or None
+        """
+        index = address // 4
+        if 0 <= index < len(self.instructions):
+            return self.instructions[index]
+        return None
+    
+    def _format_instruction(self, inst):
+        """
+        Format an instruction as human-readable text
+        
+        Args:
+            inst: Instruction object
+            
+        Returns:
+            Formatted string like "ADDI x5, x5, 1"
+        """
+        opcode = inst.opcode
+        
+        # Handle different instruction formats
+        if inst.type == InstructionType.R_TYPE:
+            return f"{opcode} x{inst.rd}, x{inst.rs1}, x{inst.rs2}"
+        
+        elif inst.type == InstructionType.I_TYPE:
+            if opcode in ['LW', 'LB', 'LH', 'LBU', 'LHU']:
+                # Load: rd, offset(rs1)
+                return f"{opcode} x{inst.rd}, {inst.imm}(x{inst.rs1})"
+            elif opcode in ['JALR']:
+                return f"{opcode} x{inst.rd}, {inst.imm}(x{inst.rs1})"
+            elif opcode.startswith('CSR'):
+                # CSR instructions
+                return f"{opcode} x{inst.rd}, 0x{inst.imm:03X}, x{inst.rs1}"
+            else:
+                # Regular I-type: rd, rs1, imm
+                return f"{opcode} x{inst.rd}, x{inst.rs1}, {inst.imm}"
+        
+        elif inst.type == InstructionType.S_TYPE:
+            # Store: rs2, offset(rs1)
+            return f"{opcode} x{inst.rs2}, {inst.imm}(x{inst.rs1})"
+        
+        elif inst.type == InstructionType.B_TYPE:
+            # Branch: rs1, rs2, offset
+            target = self.cpu.pc + inst.imm
+            return f"{opcode} x{inst.rs1}, x{inst.rs2}, 0x{target:X} ({inst.imm:+d})"
+        
+        elif inst.type == InstructionType.J_TYPE:
+            if opcode == 'JAL':
+                target = self.cpu.pc + inst.imm
+                return f"{opcode} x{inst.rd}, 0x{target:X} ({inst.imm:+d})"
+            else:
+                return f"{opcode} x{inst.rd}, {inst.imm}(x{inst.rs1})"
+        
+        elif inst.type == InstructionType.U_TYPE:
+            return f"{opcode} x{inst.rd}, 0x{inst.imm:X}"
+        
+        elif inst.type == InstructionType.HALT:
+            return opcode
+        
+        return str(inst)

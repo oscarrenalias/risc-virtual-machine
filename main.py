@@ -11,7 +11,111 @@ import logging
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from src import VirtualMachine, VMError
+from src import VirtualMachine, VMError, VMVisualizer
+
+
+def run_visual_step_mode(vm, visualizer, args):
+    """
+    Run step mode with visual panels showing CPU state
+    
+    Args:
+        vm: VirtualMachine instance
+        visualizer: VMVisualizer instance
+        args: Command-line arguments
+    """
+    visualizer.print_info("Visual step mode - CPU state panel enabled")
+    
+    continuous_mode = False
+    
+    while not vm.cpu.halted:
+        # Render current state
+        visualizer.render_step_mode(show_commands=True)
+        
+        if continuous_mode:
+            # In continuous mode, just step automatically
+            vm.step()
+            # Check for breakpoints (future enhancement)
+            continue
+        
+        # Get command from user
+        cmd = input(f"\n[0x{vm.cpu.pc:08X}]> ").strip().lower()
+        
+        if cmd == 'q':
+            break
+        elif cmd == 's' or cmd == '':
+            # Step: execute one instruction
+            vm.step()
+        elif cmd == 'c':
+            # Continue: run continuously
+            continuous_mode = True
+            visualizer.print_info("Continuous mode - running until halt or breakpoint")
+        elif cmd == 'r':
+            # Show registers (already shown in panel, but provide explicit dump)
+            vm.dump_state()
+            input("\nPress Enter to continue...")
+        elif cmd == 'd':
+            # Show display only
+            vm.display.render()
+            input("\nPress Enter to continue...")
+        elif cmd.startswith('m '):
+            # Show memory at address
+            try:
+                addr = int(cmd[2:], 0)
+                print(vm.memory.dump(addr, 128))
+                input("\nPress Enter to continue...")
+            except ValueError:
+                visualizer.print_error("Invalid address format")
+        elif cmd.startswith('b '):
+            # Set breakpoint (placeholder for future)
+            try:
+                addr = int(cmd[2:], 0)
+                vm.add_breakpoint(addr)
+                visualizer.print_info(f"Breakpoint set at 0x{addr:08X}")
+            except ValueError:
+                visualizer.print_error("Invalid address format")
+        else:
+            visualizer.print_error("Unknown command")
+    
+    visualizer.print_info("Execution completed or halted")
+
+
+def run_text_step_mode(vm, args):
+    """
+    Run original text-based step mode (fallback)
+    
+    Args:
+        vm: VirtualMachine instance
+        args: Command-line arguments
+    """
+    print("\nStep-by-step execution. Commands:")
+    print("  [Enter] - Execute next instruction")
+    print("  r - Show registers")
+    print("  d - Show display")
+    print("  m <addr> - Show memory at address")
+    print("  q - Quit")
+    
+    while not vm.cpu.halted:
+        cmd = input(f"\n[0x{vm.cpu.pc:08X}]> ").strip().lower()
+        
+        if cmd == 'q':
+            break
+        elif cmd == 'r':
+            vm.dump_state()
+        elif cmd == 'd':
+            vm.display.render()
+        elif cmd.startswith('m '):
+            try:
+                addr = int(cmd[2:], 0)
+                print(vm.memory.dump(addr, 128))
+            except ValueError:
+                print("Invalid address")
+        elif cmd == '':
+            vm.step()
+            if not args.no_display:
+                vm.display.render_simple()
+        else:
+            print("Unknown command")
+
 
 def main():
     parser = argparse.ArgumentParser(description='RISC Virtual Machine')
@@ -26,6 +130,10 @@ def main():
                        help='Update display in real-time during execution')
     parser.add_argument('--update-interval', type=int, default=10000,
                        help='Instructions between display updates in live mode (default: 10000)')
+    parser.add_argument('--cpu-view', action='store_true',
+                       help='Show CPU state panel alongside display (requires wide terminal)')
+    parser.add_argument('--min-width', type=int, default=140,
+                       help='Minimum terminal width for CPU view (default: 140)')
     
     args = parser.parse_args()
     
@@ -61,36 +169,21 @@ def main():
         vm.load_program(source)
         print(f"Loaded {len(vm.instructions)} instructions")
         
+        # Create visualizer if CPU view is requested
+        visualizer = None
+        if args.cpu_view or args.step:
+            visualizer = VMVisualizer(vm, show_cpu=True, min_width=args.min_width)
+            if visualizer.print_terminal_warning():
+                print()  # Extra line after warning
+        
         if args.step:
-            # Step-by-step execution
-            print("\nStep-by-step execution. Commands:")
-            print("  [Enter] - Execute next instruction")
-            print("  r - Show registers")
-            print("  d - Show display")
-            print("  m <addr> - Show memory at address")
-            print("  q - Quit")
-            
-            while not vm.cpu.halted:
-                cmd = input(f"\n[0x{vm.cpu.pc:08X}]> ").strip().lower()
-                
-                if cmd == 'q':
-                    break
-                elif cmd == 'r':
-                    vm.dump_state()
-                elif cmd == 'd':
-                    vm.display.render()
-                elif cmd.startswith('m '):
-                    try:
-                        addr = int(cmd[2:], 0)
-                        print(vm.memory.dump(addr, 128))
-                    except ValueError:
-                        print("Invalid address")
-                elif cmd == '':
-                    vm.step()
-                    if not args.no_display:
-                        vm.display.render_simple()
-                else:
-                    print("Unknown command")
+            # Step-by-step execution with new visualizer
+            if visualizer and visualizer.can_show_split:
+                # Use new visual step mode
+                run_visual_step_mode(vm, visualizer, args)
+            else:
+                # Fall back to old text-based step mode
+                run_text_step_mode(vm, args)
         else:
             # Run to completion
             if not args.live_display:
@@ -99,7 +192,8 @@ def main():
             count = vm.run(
                 max_instructions=args.max_instructions,
                 live_display=args.live_display,
-                update_interval=args.update_interval
+                update_interval=args.update_interval,
+                visualizer=visualizer
             )
             
             if not args.live_display:

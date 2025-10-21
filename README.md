@@ -25,8 +25,11 @@ uv run python main.py examples/hello.asm
 # Enable debug mode
 ./run.sh -d examples/counter.asm
 
-# Step through execution
-./run.sh -s examples/test.asm
+# Step through execution with CPU visualization (NEW!)
+./run.sh -s --cpu-view examples/test.asm
+
+# Live display with CPU state panel (NEW!)
+./run.sh -l --cpu-view examples/clock.asm
 ```
 
 ## Features
@@ -45,6 +48,12 @@ uv run python main.py examples/hello.asm
 - **Two Hardware Timers**: Cycle-based (deterministic) and real-time (wall-clock) timers
 - **Interrupt Support**: Hardware interrupts with CSR-based control
 - **Debug Mode**: Step-through execution with register inspection
+- **CPU Visualization**: Real-time display of registers, CSRs, and execution state (NEW!)
+  - Side-by-side display and CPU state panels
+  - Change tracking with highlighted registers
+  - Instruction preview
+  - Works in both step and live modes
+  - See [CPU_VISUALIZATION.md](docs/CPU_VISUALIZATION.md) for details
 
 ## Memory Layout
 
@@ -466,7 +475,9 @@ assert vm.cpu.read_register(1) == 42
 - [ ] Floating-point support
 - [ ] System calls for I/O
 - [ ] Graphics mode display
-- [ ] Interrupt handling
+- [X] Interrupt handling
+- [X] Text-based visualization
+- [X] Step execution of instructions
 - [ ] Debugger GUI
 - [ ] Multiple display pages
 - [ ] Color support

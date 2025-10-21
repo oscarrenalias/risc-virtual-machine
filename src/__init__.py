@@ -12,6 +12,8 @@ from .assembler import Assembler, AssemblerError
 from .vm import VirtualMachine, VMError
 from .timer import Timer
 from .realtime_timer import RealTimeTimer
+from .cpu_visualizer import CPUVisualizer
+from .visualizer import VMVisualizer
 
 __all__ = [
     'CPU',
@@ -27,4 +29,6 @@ __all__ = [
     'VMError',
     'Timer',
     'RealTimeTimer',
+    'CPUVisualizer',
+    'VMVisualizer',
 ]

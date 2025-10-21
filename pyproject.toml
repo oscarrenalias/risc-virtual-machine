@@ -3,7 +3,9 @@ name = "assembly-virtual-machine"
 version = "1.0.0"
 description = "A 32-bit RISC assembly interpreter with memory-mapped display"
 requires-python = ">=3.7"
-dependencies = []
+dependencies = [
+    "rich>=13.0.0"
+]
 
 [project.scripts]
 riscvm = "main:main"
