@@ -3,13 +3,17 @@ Virtual Machine for RISC Assembly
 Main execution engine that ties together CPU, Memory, Display, and Assembler
 """
 
-from cpu import CPU
-from memory import Memory, MemoryAccessError, MemoryProtectionError
-from display import Display
-from timer import Timer
-from realtime_timer import RealTimeTimer
-from assembler import Assembler, AssemblerError
-from instruction import InstructionType
+import logging
+
+from .cpu import CPU
+from .memory import Memory, MemoryAccessError, MemoryProtectionError
+from .display import Display
+from .timer import Timer
+from .realtime_timer import RealTimeTimer
+from .assembler import Assembler, AssemblerError
+from .instruction import InstructionType
+
+logger = logging.getLogger(__name__)
 
 class VMError(Exception):
     """Base exception for VM errors"""
@@ -77,8 +81,14 @@ class VirtualMachine:
             return False
         
         # Tick the cycle-based timer
-        if self.timer.tick():
+        tick_result = self.timer.tick()
+        if self.debug and (self.cpu.waiting_for_interrupt or self.cpu.pc >= 0x30):
+            if self.timer.counter % 5 == 0 or self.cpu.pc >= 0x30:
+                logger.debug(f"  Timer state: counter={self.timer.counter}, compare={self.timer.compare}, control=0x{self.timer.control:02X}, enabled={bool(self.timer.control & 0x01)}, tick={tick_result}")
+        if tick_result:
             # Cycle-based timer interrupt occurred
+            if self.debug:
+                logger.debug(f"  TIMER FIRED! Setting interrupt pending")
             self.cpu.set_interrupt_pending(self.cpu.MIE_MTIE)
         
         # Check real-time timer
@@ -90,14 +100,34 @@ class VirtualMachine:
         if self.cpu.has_pending_interrupts():
             interrupt_code = self.cpu.get_highest_priority_interrupt()
             if interrupt_code is not None:
+                # Wake from WFI if waiting
+                if self.cpu.waiting_for_interrupt:
+                    self.cpu.wake_from_wait()
+                    if self.debug:
+                        logger.debug(f"CPU woken from wait by interrupt 0x{interrupt_code:08X}")
+                
                 if self.debug:
-                    print(f"\n*** Interrupt 0x{interrupt_code:08X} at PC=0x{self.cpu.pc:08X} ***")
+                    logger.debug(f"\n*** Interrupt 0x{interrupt_code:08X} at PC=0x{self.cpu.pc:08X} ***")
                 self.cpu.enter_interrupt(interrupt_code)
                 # Clear appropriate interrupt pending bit
                 if interrupt_code == self.cpu.INT_TIMER:
                     self.cpu.clear_interrupt_pending(self.cpu.MIE_MTIE)
                 elif interrupt_code == self.cpu.INT_TIMER_REALTIME:
                     self.cpu.clear_interrupt_pending(self.cpu.MIE_RTIE)
+        
+        # If CPU is waiting for interrupt, don't execute instructions
+        if self.cpu.waiting_for_interrupt:
+            # Still count as a cycle (timers are ticking)
+            self.cpu.instruction_count += 1
+            if self.debug:
+                logger.debug(f"[0x{self.cpu.pc:08X}] (waiting for interrupt)")
+            
+            # Add small sleep to allow real-time to pass for RT timer
+            # This prevents burning through instruction limit while waiting
+            import time
+            time.sleep(0.00001)  # 10 microseconds - allows RT timer to fire
+            
+            return True
         
         # Check if PC is valid
         instruction_index = self.cpu.pc // 4
@@ -108,11 +138,11 @@ class VirtualMachine:
         instruction = self.instructions[instruction_index]
         
         if self.debug:
-            print(f"\n[0x{self.cpu.pc:08X}] {instruction}")
+            logger.debug(f"\n[0x{self.cpu.pc:08X}] {instruction}")
         
         # Check breakpoint
         if self.cpu.pc in self.breakpoints:
-            print(f"Breakpoint hit at 0x{self.cpu.pc:08X}")
+            logger.info(f"Breakpoint hit at 0x{self.cpu.pc:08X}")
             return False
         
         # Execute instruction
@@ -156,7 +186,7 @@ class VirtualMachine:
             
             if count >= max_instructions:
                 if not live_display:
-                    print(f"Warning: Execution stopped after {max_instructions} instructions")
+                    logger.warning(f"Execution stopped after {max_instructions} instructions")
         finally:
             if live_display:
                 # Show cursor again
@@ -202,8 +232,18 @@ class VirtualMachine:
                 # Return from interrupt
                 self.cpu.return_from_interrupt()
                 if self.debug:
-                    print(f"Return from interrupt to PC=0x{self.cpu.pc:08X}")
+                    logger.debug(f"Return from interrupt to PC=0x{self.cpu.pc:08X}")
                 return  # Don't increment PC, MRET sets it
+            elif opcode == 'WFI':
+                # Wait for interrupt
+                # Warning if interrupts are disabled (potential deadlock)
+                if not self.cpu.interrupt_enabled:
+                    logger.warning(f"WFI at PC=0x{self.cpu.pc:08X} with interrupts disabled - potential deadlock!")
+                self.cpu.wait_for_interrupt()
+                if self.debug:
+                    logger.debug(f"CPU entering wait-for-interrupt state at PC=0x{self.cpu.pc:08X}")
+                self.cpu.increment_pc()  # Advance PC so we resume after WFI
+                return  # Don't increment PC again
         
         else:
             raise VMError(f"Unknown instruction type: {instruction.type}")
@@ -352,6 +392,9 @@ class VirtualMachine:
         rs2_val = self.cpu.read_register(inst.rs2)
         imm = self.cpu.sign_extend(inst.imm & 0xFFF, 12)
         addr = (rs1_val + imm) & 0xFFFFFFFF
+        
+        if self.debug:
+            logger.debug(f"SW: rs1=x{inst.rs1}=0x{rs1_val:08X} + imm={imm} = addr=0x{addr:08X}, value=0x{rs2_val:08X}")
         
         if inst.opcode == 'SW':
             self.memory.write_word(addr, rs2_val)

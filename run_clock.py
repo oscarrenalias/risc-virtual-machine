@@ -8,7 +8,7 @@ import os
 import time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from vm import VirtualMachine
+from src import VirtualMachine
 
 def main():
     # Read clock.asm

@@ -14,12 +14,12 @@ main:
 
     # Set up real-time timer interrupt handler
     LUI x1, 0x0
-    ADDI x1, x1, 376        # Handler address (timer_handler label)
-    CSRRW x0, 0x305, x1     # mtvec = handler address
+    ADDI x1, x1, timer_handler    # Handler address - using label!
+    CSRRW x0, 0x305, x1           # mtvec = handler address
     
     # Configure real-time timer for 1 Hz
     LUI x1, 0xF8
-    ADDI x1, x1, -480       # RT timer base = 0xF7E20
+    ADDI x1, x1, -480       # RT timer base = 0xF8000 - 480 = 0xF7E20
     
     ADDI x3, x0, 1          # Frequency = 1 Hz (use x3 instead of x2)
     SW x3, 4(x1)            # Write to RT_TIMER_FREQUENCY
@@ -28,8 +28,9 @@ main:
     SW x3, 8(x1)            # Write to RT_TIMER_CONTROL
     
     # Enable real-time timer interrupt in MIE (bit 11 = 0x800)
-    LUI x3, 0x0
-    ADDI x3, x3, 0x800
+    # Note: 0x800 is negative in 12-bit signed, so use LUI to load upper bits
+    LUI x3, 0x1             # Load 0x1000
+    ADDI x3, x3, -2048      # Subtract 2048 to get 0x800 (clearer than sign extension)
     CSRRW x0, 0x304, x3     # mie = RT timer interrupt enable
     
     # Enable global interrupts in mstatus
@@ -40,8 +41,9 @@ main:
     JAL x1, display_clock
 
 main_loop:
-    # Main loop - just wait for interrupts
-    JAL x0, main_loop
+    # Main loop - wait for interrupts using WFI (power efficient!)
+    WFI                     # Wait for next timer interrupt
+    JAL x0, main_loop       # Loop back to wait again
 
 # Display clock subroutine
 display_clock:
@@ -180,7 +182,7 @@ update_display:
     
     # Clear RT timer interrupt
     LUI x11, 0xF8
-    ADDI x11, x11, -480     # RT timer base
+    ADDI x11, x11, -480     # RT timer base = 0xF8000 - 480 = 0xF7E20
     ADDI x12, x0, 0x05      # Enable | INT_PENDING
     SW x12, 8(x11)          # Clear interrupt
     

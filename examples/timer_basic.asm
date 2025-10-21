@@ -9,10 +9,9 @@
     ADDI x11, x0, 0      # Counter starts at 0
     SW x11, 0(x10)       # Store counter
     
-    # Set up interrupt handler address
-    # Handler is at label 'interrupt_handler' which will be at PC offset
+    # Set up interrupt handler address using label
     LUI x1, 0x0          # Upper 20 bits
-    ADDI x1, x1, 68      # handler at instruction 17 = byte 68 (17*4)
+    ADDI x1, x1, interrupt_handler  # Handler address from label
     CSRRW x0, 0x305, x1  # Write to mtvec (CSR 0x305)
     
     # Configure timer for 1000 instruction intervals

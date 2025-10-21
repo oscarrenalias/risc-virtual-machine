@@ -3,6 +3,10 @@ CPU module for the RISC VM
 Implements 32-bit RISC processor with 32 general-purpose registers
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 class CPU:
     """
     32-bit RISC CPU with:
@@ -38,6 +42,7 @@ class CPU:
         self.registers = [0] * self.NUM_REGISTERS
         self.pc = 0  # Program counter
         self.halted = False
+        self.waiting_for_interrupt = False  # WFI state
         self.instruction_count = 0
         
         # Control and Status Registers
@@ -140,6 +145,7 @@ class CPU:
         self.registers = [0] * self.NUM_REGISTERS
         self.pc = 0
         self.halted = False
+        self.waiting_for_interrupt = False
         self.instruction_count = 0
         
         # Reset CSRs
@@ -248,6 +254,7 @@ class CPU:
         # Update interrupt_enabled flag based on mstatus
         if csr_addr == self.CSR_MSTATUS:
             self.interrupt_enabled = bool(value & self.MSTATUS_MIE)
+            logger.debug(f"write_csr: mstatus=0x{value:08X}, MIE bit={value & self.MSTATUS_MIE}, interrupt_enabled={self.interrupt_enabled}")
     
     def set_csr_bits(self, csr_addr, mask):
         """
@@ -287,11 +294,13 @@ class CPU:
         """Enable interrupts globally"""
         self.csr[self.CSR_MSTATUS] |= self.MSTATUS_MIE
         self.interrupt_enabled = True
+        logger.debug(f"enable_interrupts: mstatus now=0x{self.csr[self.CSR_MSTATUS]:08X}, interrupt_enabled={self.interrupt_enabled}")
     
     def disable_interrupts(self):
         """Disable interrupts globally"""
         self.csr[self.CSR_MSTATUS] &= ~self.MSTATUS_MIE
         self.interrupt_enabled = False
+        logger.debug(f"disable_interrupts: mstatus now=0x{self.csr[self.CSR_MSTATUS]:08X}, interrupt_enabled={self.interrupt_enabled}")
     
     def set_interrupt_pending(self, interrupt_bit):
         """
@@ -325,7 +334,12 @@ class CPU:
         enabled = self.csr[self.CSR_MIE]
         pending = self.csr[self.CSR_MIP]
         
-        return bool(enabled & pending)
+        result = bool(enabled & pending)
+        # Debug: Log if waiting and interrupt pending
+        if self.waiting_for_interrupt and pending:
+            logger.debug(f"has_pending: enabled=0x{enabled:08X}, pending=0x{pending:08X}, result={result}")
+        
+        return result
     
     def get_highest_priority_interrupt(self):
         """
@@ -362,6 +376,7 @@ class CPU:
         Args:
             cause: Interrupt cause code
         """
+        logger.debug(f"enter_interrupt: cause=0x{cause:08X}, pc=0x{self.pc:08X}, mtvec=0x{self.csr[self.CSR_MTVEC]:08X}")
         # Save current PC to mepc
         self.csr[self.CSR_MEPC] = self.pc
         
@@ -373,6 +388,7 @@ class CPU:
         
         # Jump to trap vector
         self.pc = self.csr[self.CSR_MTVEC] & 0xFFFFFFFF
+        logger.debug(f"enter_interrupt: jumped to handler at PC=0x{self.pc:08X}")
     
     def return_from_interrupt(self):
         """
@@ -383,3 +399,17 @@ class CPU:
         
         # Re-enable interrupts
         self.enable_interrupts()
+    
+    def wait_for_interrupt(self):
+        """
+        Enter wait-for-interrupt state (WFI instruction)
+        CPU will not execute instructions until an interrupt occurs
+        """
+        self.waiting_for_interrupt = True
+    
+    def wake_from_wait(self):
+        """
+        Wake CPU from wait-for-interrupt state
+        Can be called by interrupt handler or externally for debugging
+        """
+        self.waiting_for_interrupt = False

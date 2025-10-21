@@ -6,8 +6,8 @@
     # Initialize counter
     ADDI x10, x0, 0         # x10 = interrupt count
     
-    # Set up interrupt handler (at instruction 17 = PC 68)
-    ADDI x1, x0, 68         # Handler address
+    # Set up interrupt handler using label
+    ADDI x1, x0, handler    # Handler address from label
     CSRRW x0, 0x305, x1     # mtvec = handler address
     
     # Configure RT timer for 10 Hz (100ms intervals)

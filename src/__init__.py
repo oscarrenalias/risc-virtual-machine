@@ -10,6 +10,8 @@ from .display import Display
 from .instruction import Instruction, InstructionType
 from .assembler import Assembler, AssemblerError
 from .vm import VirtualMachine, VMError
+from .timer import Timer
+from .realtime_timer import RealTimeTimer
 
 __all__ = [
     'CPU',
@@ -23,4 +25,6 @@ __all__ = [
     'AssemblerError',
     'VirtualMachine',
     'VMError',
+    'Timer',
+    'RealTimeTimer',
 ]

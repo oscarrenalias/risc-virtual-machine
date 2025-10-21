@@ -1,8 +1,8 @@
 # Minimal interrupt test - just setup, no loop
 .text
-    # Write handler address directly 
-    ADDI x1, x0, 32      # Handler at instruction 8 = byte 32
-    CSRRW x0, 0x305, x1  # mtvec = 32
+    # Write handler address using label
+    ADDI x1, x0, handler # Handler address
+    CSRRW x0, 0x305, x1  # mtvec = handler address
     
     # Enable global interrupts
     ADDI x2, x0, 0x08    

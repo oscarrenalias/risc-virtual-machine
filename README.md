@@ -33,6 +33,7 @@ uv run python main.py examples/hello.asm
 
 - **32-bit RISC Architecture**: Based on RISC-V instruction set
 - **32 General-Purpose Registers**: x0-x31 (x0 hardwired to zero)
+- **Label Support**: Use labels directly in instructions instead of manual address calculation
 - **1MB Memory**: 
   - Text segment (64KB)
   - Data segment (192KB)
@@ -41,6 +42,8 @@ uv run python main.py examples/hello.asm
   - Memory-mapped I/O (64KB)
 - **Memory-Mapped Display**: 80x25 character text display
 - **Comprehensive Instruction Set**: Arithmetic, logical, memory, branch, and jump instructions
+- **Two Hardware Timers**: Cycle-based (deterministic) and real-time (wall-clock) timers
+- **Interrupt Support**: Hardware interrupts with CSR-based control
 - **Debug Mode**: Step-through execution with register inspection
 
 ## Memory Layout
@@ -131,6 +134,46 @@ Wall-clock based timing for real-world event simulation (1 Hz - 1000 Hz).
 - `examples/timer_test.asm` - Cycle-based timer test
 - `examples/rt_timer_test.asm` - Real-time timer test
 - `examples/clock.asm` - Real-time clock using RT timer at 1 Hz
+
+## Assembly Language
+
+### Label Support
+
+Labels can be used directly in instructions instead of manually calculating addresses:
+
+```asm
+# OLD WAY - Manual address calculation
+LUI x1, 0x0
+ADDI x1, x1, 380        # Must manually calculate handler address
+CSRRW x0, 0x305, x1
+
+# NEW WAY - Use labels directly
+LUI x1, 0x0
+ADDI x1, x1, timer_handler    # Assembler resolves automatically!
+CSRRW x0, 0x305, x1
+
+timer_handler:
+    ADDI x3, x3, 1
+    MRET
+```
+
+**Supported in:**
+- I-type instructions: `ADDI`, `ANDI`, `ORI`, `XORI`, `SLTI`, `SLTIU`, etc.
+- Branch instructions: `BEQ`, `BNE`, `BLT`, `BGE`, `BLTU`, `BGEU`
+- Jump instructions: `JAL`
+
+See [docs/LABEL_SUPPORT.md](docs/LABEL_SUPPORT.md) for detailed documentation.
+
+**Examples:**
+- `examples/label_demo.asm` - Simple label usage demonstration
+- `examples/clock_with_labels.asm` - Clock example using label-based addressing
+
+### Comments
+
+```asm
+# This is a comment
+ADDI x1, x2, 10    # Inline comment
+; Semicolons also work
 ```
 
 ## Instruction Set

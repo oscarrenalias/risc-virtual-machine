@@ -6,11 +6,12 @@ Main entry point for the RISC Virtual Machine
 import sys
 import os
 import argparse
+import logging
 
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from vm import VirtualMachine, VMError
+from src import VirtualMachine, VMError
 
 def main():
     parser = argparse.ArgumentParser(description='RISC Virtual Machine')
@@ -27,6 +28,18 @@ def main():
                        help='Instructions between display updates in live mode (default: 10000)')
     
     args = parser.parse_args()
+    
+    # Configure logging based on debug flag
+    if args.debug:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format='[%(name)s] %(message)s'
+        )
+    else:
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(message)s'
+        )
     
     # Read source file
     try:

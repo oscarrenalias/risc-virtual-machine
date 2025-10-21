@@ -4,7 +4,7 @@ Parses assembly source code into instructions
 """
 
 import re
-from instruction import (
+from .instruction import (
     Instruction, InstructionType, INSTRUCTION_SET,
     parse_register, parse_immediate, parse_memory_operand
 )
@@ -133,6 +133,9 @@ class Assembler:
                     # Jump offset is also relative
                     current_addr = self.instructions.index(instruction) * 4
                     instruction.imm = target_addr - current_addr
+                elif instruction.type == InstructionType.I_TYPE:
+                    # For I-type, use absolute address as immediate
+                    instruction.imm = target_addr
     
     def _parse_instruction(self, line):
         """
@@ -198,13 +201,20 @@ class Assembler:
                 # Store uimm in rs1 field for CSR immediate instructions
                 return Instruction(opcode, inst_type, rd=rd, rs1=uimm, imm=csr)
             else:
-                # Format: ADDI x1, x2, 100
+                # Format: ADDI x1, x2, 100 or ADDI x1, x2, label
                 if len(parts) < 4:
                     raise AssemblerError(f"I-type instruction requires 3 operands: {line}")
                 rd = parse_register(parts[1])
                 rs1 = parse_register(parts[2])
-                imm = parse_immediate(parts[3])
-                return Instruction(opcode, inst_type, rd=rd, rs1=rs1, imm=imm)
+                
+                # Check if it's a label or immediate
+                target = parts[3]
+                try:
+                    imm = parse_immediate(target)
+                    return Instruction(opcode, inst_type, rd=rd, rs1=rs1, imm=imm)
+                except ValueError:
+                    # It's a label
+                    return Instruction(opcode, inst_type, rd=rd, rs1=rs1, label=target)
         
         elif inst_type == InstructionType.S_TYPE:
             # Format: SW x1, 100(x2)
@@ -265,8 +275,8 @@ class Assembler:
             return Instruction(opcode, inst_type, rd=rd, imm=imm)
         
         elif inst_type == InstructionType.HALT:
-            # HALT and MRET take no operands
-            if opcode in ['HALT', 'MRET']:
+            # HALT, MRET, and WFI take no operands
+            if opcode in ['HALT', 'MRET', 'WFI']:
                 return Instruction(opcode, inst_type)
         
         raise AssemblerError(f"Could not parse instruction: {line}")

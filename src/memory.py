@@ -3,6 +3,10 @@ Memory module for the RISC VM
 Provides 1MB of addressable memory with memory-mapped I/O for display
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 class MemoryAccessError(Exception):
     """Raised when attempting to access invalid memory address"""
     pass
@@ -132,6 +136,8 @@ class Memory:
     
     def write_word(self, address, value):
         """Write a 32-bit word to memory (little-endian)"""
+        if 0xF7E00 <= address <= 0xF7E10:
+            logger.debug(f"write_word ENTRY: address=0x{address:08X}, value={value}")
         self._check_bounds(address, 4)
         self._check_alignment(address, 4)
         
@@ -142,11 +148,15 @@ class Memory:
             )
         
         # Handle memory-mapped I/O
+        if 0xF7E00 <= address <= 0xF7E10:
+            logger.debug(f"write_word: Timer address detected 0x{address:08X}, self.timer={self.timer is not None}")
+        
         if self.DISPLAY_BUFFER_START <= address <= self.DISPLAY_BUFFER_END:
             self._handle_display_write(address, value)
         elif self.DISPLAY_CONTROL_START <= address <= self.DISPLAY_CONTROL_END:
             self._handle_control_register_write(address, value)
         elif self.timer and self.TIMER_COUNTER <= address <= self.TIMER_STATUS:
+            logger.debug(f"Routing to timer handler")
             self._handle_timer_write(address, value)
             return  # Timer registers don't write to memory
         elif self.rt_timer and self.RT_TIMER_COUNTER <= address <= self.RT_TIMER_COMPARE:
@@ -237,14 +247,19 @@ class Memory:
     
     def _handle_timer_write(self, address, value):
         """Handle writes to timer registers"""
+        logger.debug(f"Timer write to 0x{address:08X} = {value}")
         if address == self.TIMER_COUNTER:
             self.timer.write_counter(value)
+            logger.debug(f"  -> wrote counter, now counter={self.timer.counter}")
         elif address == self.TIMER_COMPARE:
             self.timer.write_compare(value)
+            logger.debug(f"  -> wrote compare, now compare={self.timer.compare}")
         elif address == self.TIMER_CONTROL:
             self.timer.write_control(value)
+            logger.debug(f"  -> wrote control, now control=0x{self.timer.control:02X}")
         elif address == self.TIMER_PRESCALER:
             self.timer.write_prescaler(value)
+            logger.debug(f"  -> wrote prescaler, now prescaler={self.timer.prescaler}")
     
     def _handle_rt_timer_read(self, address):
         """Handle reads from real-time timer registers"""

@@ -137,6 +137,7 @@ INSTRUCTION_SET = {
     # System
     'HALT': InstructionType.HALT,
     'MRET': InstructionType.HALT,  # Return from interrupt (like HALT but different semantics)
+    'WFI': InstructionType.HALT,   # Wait for interrupt
     'NOP': InstructionType.I_TYPE,  # No operation (implemented as ADDI x0, x0, 0)
 }
 
