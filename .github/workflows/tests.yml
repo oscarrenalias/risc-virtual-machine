@@ -33,7 +33,7 @@ jobs:
     - name: Install dependencies
       run: |
         export PATH="$HOME/.cargo/bin:$PATH"
-        uv sync
+        uv sync --extra dev
     
     - name: Run full test suite with coverage
       id: tests
