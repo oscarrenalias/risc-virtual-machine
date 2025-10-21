@@ -26,15 +26,20 @@ jobs:
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
     
     - name: Verify UV installation
-      run: uv --version
+      run: |
+        export PATH="$HOME/.cargo/bin:$PATH"
+        uv --version
     
     - name: Install dependencies
-      run: uv sync
+      run: |
+        export PATH="$HOME/.cargo/bin:$PATH"
+        uv sync
     
     - name: Run full test suite with coverage
       id: tests
       run: |
         set -o pipefail
+        export PATH="$HOME/.cargo/bin:$PATH"
         uv run pytest tests/ \
           --cov=src \
           --cov-report=term-missing \
