@@ -19,8 +19,9 @@ class Assembler:
     def __init__(self):
         self.labels = {}  # Map label names to addresses
         self.instructions = []  # List of parsed instructions
-        self.data_section = {}  # Data section values
+        self.data_section = {}  # Data section: maps addresses to byte values
         self.current_address = 0
+        self.data_start_address = 0x10000  # Data section starts at 64KB
         
     def assemble(self, source):
         """
@@ -166,7 +167,7 @@ class Assembler:
                         self.current_address = 0x00000  # Text starts at 0
                     elif line == '.data':
                         current_section = '.data'
-                        self.current_address = 0x10000  # Data starts at 64KB
+                        self.current_address = self.data_start_address  # Data starts at 64KB
                     continue
                 
                 # Check for label
@@ -357,10 +358,133 @@ class Assembler:
         raise AssemblerError(f"Could not parse instruction: {line}")
     
     def _parse_data_directive(self, line):
-        """Parse data section directive (.word, .string, etc.)"""
-        # TODO: Implement data section support
-        pass
+        """
+        Parse data section directive (.word, .string, .asciiz, etc.)
+        
+        Supported directives:
+        - .string "text"  - Store null-terminated string
+        - .asciiz "text"  - Same as .string (MIPS compatibility)
+        - .word value     - Store 32-bit word
+        - .byte value     - Store single byte
+        """
+        line = line.strip()
+        
+        # String directives
+        if line.startswith('.string') or line.startswith('.asciiz'):
+            self._parse_string_directive(line)
+        # Word directive
+        elif line.startswith('.word'):
+            self._parse_word_directive(line)
+        # Byte directive
+        elif line.startswith('.byte'):
+            self._parse_byte_directive(line)
+        else:
+            raise AssemblerError(f"Unknown data directive: {line}")
+    
+    def _parse_string_directive(self, line):
+        """
+        Parse .string or .asciiz directive
+        Example: .string "Hello, World!"
+        """
+        # Extract the string content between quotes
+        match = re.search(r'\.(?:string|asciiz)\s+"([^"]*)"', line)
+        if not match:
+            raise AssemblerError(f"Invalid string directive format: {line}")
+        
+        string_content = match.group(1)
+        
+        # Process escape sequences
+        processed = self._process_escape_sequences(string_content)
+        
+        # Store each character as a byte
+        for char in processed:
+            self.data_section[self.current_address] = ord(char)
+            self.current_address += 1
+        
+        # Add null terminator
+        self.data_section[self.current_address] = 0
+        self.current_address += 1
+    
+    def _parse_word_directive(self, line):
+        """
+        Parse .word directive
+        Example: .word 12345 or .word 0x1000
+        """
+        parts = line.split()
+        if len(parts) < 2:
+            raise AssemblerError(f"Invalid word directive format: {line}")
+        
+        value = parse_immediate(parts[1])
+        
+        # Store as 4 bytes (little-endian)
+        self.data_section[self.current_address] = value & 0xFF
+        self.data_section[self.current_address + 1] = (value >> 8) & 0xFF
+        self.data_section[self.current_address + 2] = (value >> 16) & 0xFF
+        self.data_section[self.current_address + 3] = (value >> 24) & 0xFF
+        self.current_address += 4
+    
+    def _parse_byte_directive(self, line):
+        """
+        Parse .byte directive
+        Example: .byte 65 or .byte 'A'
+        """
+        parts = line.split()
+        if len(parts) < 2:
+            raise AssemblerError(f"Invalid byte directive format: {line}")
+        
+        value = parse_immediate(parts[1])
+        
+        # Store single byte
+        self.data_section[self.current_address] = value & 0xFF
+        self.current_address += 1
+    
+    def _process_escape_sequences(self, text):
+        """
+        Process escape sequences in a string
+        \n -> newline, \t -> tab, \0 -> null, \\ -> backslash, \" -> quote
+        """
+        result = []
+        i = 0
+        while i < len(text):
+            if text[i] == '\\' and i + 1 < len(text):
+                next_char = text[i + 1]
+                if next_char == 'n':
+                    result.append('\n')
+                    i += 2
+                elif next_char == 't':
+                    result.append('\t')
+                    i += 2
+                elif next_char == 'r':
+                    result.append('\r')
+                    i += 2
+                elif next_char == '0':
+                    result.append('\0')
+                    i += 2
+                elif next_char == '\\':
+                    result.append('\\')
+                    i += 2
+                elif next_char == '"':
+                    result.append('"')
+                    i += 2
+                else:
+                    # Unknown escape, keep as-is
+                    result.append(text[i])
+                    i += 1
+            else:
+                result.append(text[i])
+                i += 1
+        
+        return ''.join(result)
     
     def get_labels(self):
         """Get dictionary of labels and their addresses"""
         return self.labels.copy()
+    
+    def get_data_section(self):
+        """
+        Get the data section as a dictionary mapping addresses to byte values
+        
+        Returns:
+            Dictionary of {address: byte_value}
+        """
+        return self.data_section.copy()

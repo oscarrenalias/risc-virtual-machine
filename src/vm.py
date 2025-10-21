@@ -105,9 +105,16 @@ class VirtualMachine:
             # Assemble the program
             self.instructions = self.assembler.assemble(source)
             
+            # Load data section into memory
+            data_section = self.assembler.get_data_section()
+            for address, byte_value in data_section.items():
+                self.memory.write_byte(address, byte_value)
+            
             if self.debug:
                 print(f"Assembled {len(self.instructions)} instructions")
                 print(f"Labels: {self.assembler.get_labels()}")
+                if data_section:
+                    print(f"Data section: {len(data_section)} bytes loaded")
             
             # Reset CPU and timers
             self.cpu.reset()
