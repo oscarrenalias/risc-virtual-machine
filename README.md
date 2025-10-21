@@ -35,11 +35,11 @@ uv run python main.py examples/hello.asm
 ./run.sh examples/hello.asm --clock-hz 10000   # 10 kHz (fast)
 ./run.sh examples/hello.asm --no-clock         # Maximum speed
 
-# Step through execution with CPU visualization (NEW!)
-./run.sh -s --cpu-view examples/test.asm
+# Step through execution with live visualization (NEW!)
+./run.sh -s -l examples/test.asm
 
-# Live display with CPU state panel (NEW!)
-./run.sh -l --cpu-view examples/clock.asm
+# Live visualization with display + CPU state panel (NEW!)
+./run.sh -l examples/clock.asm
 ```
 
 ## Features
@@ -63,11 +63,12 @@ uv run python main.py examples/hello.asm
 - **Two Hardware Timers**: Cycle-based (deterministic) and real-time (wall-clock) timers
 - **Interrupt Support**: Hardware interrupts with CSR-based control
 - **Debug Mode**: Step-through execution with register inspection
-- **CPU Visualization**: Real-time display of registers, CSRs, and execution state (NEW!)
+- **Live Visualization**: Real-time display of both screen output and CPU state (NEW!)
   - Side-by-side display and CPU state panels
   - Change tracking with highlighted registers
-  - Instruction preview
-  - Works in both step and live modes
+  - Instruction preview in step mode
+  - Automatic update intervals based on clock speed
+  - Works in both step and continuous execution modes
   - See [CPU_VISUALIZATION.md](docs/CPU_VISUALIZATION.md) for details
 
 ## Memory Layout
@@ -244,15 +245,37 @@ uv run python main.py -d examples/fibonacci.asm
 ### Step-by-Step Execution
 
 ```bash
+# Basic step mode
 uv run python main.py -s examples/counter.asm
+
+# Step mode with live visualization
+uv run python main.py -s -l examples/counter.asm
 ```
 
 Commands in step mode:
-- `[Enter]` - Execute next instruction
+- `s` or `[Enter]` - Execute next instruction
+- `c` - Continue (run until halt)
 - `r` - Show registers
 - `d` - Show display
 - `m <addr>` - Show memory at address (hex)
+- `b <addr>` - Set breakpoint
 - `q` - Quit
+
+### Live Visualization
+
+```bash
+# Continuous execution with live display + CPU state
+uv run python main.py -l examples/clock.asm
+
+# With slower clock speed for better viewing
+uv run python main.py -l --clock-hz 5 examples/counter.asm
+```
+
+Features:
+- Side-by-side display and CPU state panels
+- Real-time register updates with change highlighting
+- Automatic update intervals based on clock speed
+- Requires minimum 140 column terminal width
 
 ### Command-Line Options
 
@@ -270,6 +293,10 @@ optional arguments:
   -m MAX_INSTRUCTIONS, --max-instructions MAX_INSTRUCTIONS
                         Maximum instructions to execute (default: 1000000)
   --no-display          Disable display rendering
+  -l, --live-display    Enable live visualization (display + CPU state)
+  --min-width WIDTH     Minimum terminal width for split view (default: 140)
+  --clock-hz HZ         CPU clock frequency in Hz (1-10000, default: 1000)
+  --no-clock            Disable CPU clock for maximum speed
 ```
 
 ## Example Programs

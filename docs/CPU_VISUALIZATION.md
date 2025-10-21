@@ -1,8 +1,8 @@
-# CPU Visualization Feature
+# Live Visualization Feature
 
 ## Overview
 
-The RISC VM includes a powerful CPU state visualization feature that displays CPU registers, control/status registers (CSRs), and execution state alongside the memory-mapped display. This feature is designed to help you understand how the CPU works and how assembly instructions affect the system state.
+The RISC VM includes a powerful live visualization feature that displays both the memory-mapped display (80x25 text) and CPU state (registers, CSRs, execution state) side by side. This feature is designed to help you understand how the CPU works and how assembly instructions affect the system state.
 
 ## Features
 
@@ -15,26 +15,28 @@ Step through your program instruction by instruction while seeing:
 - Control and Status Registers (mstatus, mie, mip, mtvec)
 - Changed registers highlighted in yellow
 - Decoded CSR flags
+- Display output in real-time
 
-### 2. **Live Mode with CPU View**
+### 2. **Live Continuous Execution**
 Watch your program execute in real-time with periodic updates showing:
 - Display output
 - CPU register state
 - Execution statistics
+- Automatic update intervals based on clock speed
 
 ### 3. **Side-by-Side Layout**
 Display and CPU state panels are shown side by side for easy comparison and monitoring.
 
 ## Usage
 
-### Step Mode with CPU View
+### Step Mode with Visualization
 
 ```bash
-# Basic step mode with CPU visualization
-uv run python main.py -s --cpu-view examples/hello.asm
+# Step mode with full visualization (display + CPU state)
+uv run python main.py -s -l examples/hello.asm
 
 # Or using the convenience script
-./run.sh -s --cpu-view examples/fibonacci.asm
+./run.sh -s -l examples/fibonacci.asm
 ```
 
 **Commands in step mode:**
@@ -46,11 +48,14 @@ uv run python main.py -s --cpu-view examples/hello.asm
 - `b <addr>` - Set breakpoint at address (future feature)
 - `q` - Quit
 
-### Live Mode with CPU View
+### Live Continuous Execution
 
 ```bash
-# Live display with CPU state updates
-uv run python main.py -l --cpu-view --update-interval 1000 examples/clock.asm
+# Live visualization during continuous execution
+uv run python main.py -l examples/clock.asm
+
+# With specific clock speed for better viewing
+uv run python main.py -l --clock-hz 5 examples/counter.asm
 ```
 
 ### Terminal Width Requirements
@@ -63,7 +68,7 @@ If your terminal is too narrow, the feature will automatically fall back to disp
 
 You can adjust the minimum width requirement:
 ```bash
-uv run python main.py -s --cpu-view --min-width 120 examples/hello.asm
+uv run python main.py -s -l --min-width 120 examples/hello.asm
 ```
 
 ## Examples
@@ -72,7 +77,7 @@ uv run python main.py -s --cpu-view --min-width 120 examples/hello.asm
 
 ```bash
 # Step through hello.asm to see how characters are written to display
-uv run python main.py -s --cpu-view examples/hello.asm
+uv run python main.py -s -l examples/hello.asm
 ```
 
 Watch how:
@@ -85,7 +90,7 @@ Watch how:
 
 ```bash
 # Step through the timer example to see interrupt handling
-uv run python main.py -s --cpu-view examples/timer_test.asm
+uv run python main.py -s -l examples/timer_test.asm
 ```
 
 Observe:
@@ -98,13 +103,14 @@ Observe:
 
 ```bash
 # Watch the clock run with real-time CPU state
-uv run python main.py -l --cpu-view --update-interval 5000 examples/clock.asm
+uv run python main.py -l --clock-hz 5 examples/clock.asm
 ```
 
 See:
 - Real-time timer interrupts
 - Register values changing (x20=hours, x21=minutes, x22=seconds)
 - Display updating with formatted time
+- Automatic update interval adjusted for clock speed
 
 ## Technical Details
 
@@ -173,7 +179,7 @@ The architecture supports both step-by-step debugging and live execution modes w
 
 **Step mode not showing CPU panel:**
 - Check terminal width
-- Try explicitly adding `--cpu-view` flag
+- Ensure you're using the `-l` flag
 - Check for error messages on startup
 
 ## Future Enhancements

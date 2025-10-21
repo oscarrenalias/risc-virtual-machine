@@ -240,15 +240,13 @@ class VirtualMachine:
         
         return not self.cpu.halted
     
-    def run(self, max_instructions=1000000, live_display=False, update_interval=10000, visualizer=None):
+    def run(self, max_instructions=1000000, visualizer=None):
         """
         Run the program until halt or max instructions
         
         Args:
             max_instructions: Maximum number of instructions to execute
-            live_display: If True, update display during execution
-            update_interval: Number of instructions between display updates (auto-adjusted for clock speed)
-            visualizer: Optional VMVisualizer instance for enhanced display
+            visualizer: Optional VMVisualizer instance for live visualization with display + CPU state
             
         Returns:
             Number of instructions executed
@@ -256,12 +254,13 @@ class VirtualMachine:
         import sys
         count = 0
         
-        # Use visualizer if provided, otherwise use legacy display
+        # Determine if we're using visualization
         use_visualizer = visualizer is not None and visualizer.can_show_split
         
-        # Adjust update interval based on clock speed for better responsiveness
+        # Calculate update interval based on clock speed for better responsiveness
         # At low clock speeds, update more frequently so user sees progress
-        if self.cpu_clock.enabled and live_display:
+        update_interval = 10000  # Default for fast execution
+        if self.cpu_clock.enabled and use_visualizer:
             if self.cpu_clock.frequency <= 10:
                 # Very slow: update every instruction
                 update_interval = 1
@@ -271,34 +270,22 @@ class VirtualMachine:
             elif self.cpu_clock.frequency <= 1000:
                 # Medium: update every 100 instructions
                 update_interval = 100
-            # else: use provided update_interval (for fast clocks or no clock)
-        
-        if live_display and not use_visualizer:
-            # Legacy mode: Clear screen and hide cursor
-            print("\033[2J\033[?25l", end='', flush=True)
+            # else: use default update_interval (for fast clocks or no clock)
         
         try:
             while count < max_instructions and self.step():
                 count += 1
                 
-                # Update display periodically if live display is enabled
-                if live_display and count % update_interval == 0:
-                    if use_visualizer:
-                        # Use new visualizer with CPU panel
-                        visualizer.render_live_mode_update(count)
-                    else:
-                        # Legacy display only
-                        print("\033[H", end='', flush=True)
-                        self.display.render()
-                        print(f"\nInstructions: {count:,}", flush=True)
+                # Update visualization periodically if visualizer is enabled
+                if use_visualizer and count % update_interval == 0:
+                    # Use visualizer with CPU panel and display
+                    visualizer.render_live_mode_update(count)
             
             if count >= max_instructions:
-                if not live_display:
+                if not use_visualizer:
                     logger.warning(f"Execution stopped after {max_instructions} instructions")
         finally:
-            if live_display and not use_visualizer:
-                # Show cursor again (legacy mode)
-                print("\033[?25h", end='', flush=True)
+            pass
         
         return count
     

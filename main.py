@@ -127,13 +127,9 @@ def main():
                        help='Maximum instructions to execute (default: 1000000)')
     parser.add_argument('--no-display', action='store_true', help='Disable display rendering')
     parser.add_argument('-l', '--live-display', action='store_true', 
-                       help='Update display in real-time during execution')
-    parser.add_argument('--update-interval', type=int, default=10000,
-                       help='Instructions between display updates in live mode (default: 10000)')
-    parser.add_argument('--cpu-view', action='store_true',
-                       help='Show CPU state panel alongside display (requires wide terminal)')
+                       help='Enable live visualization with display and CPU state (requires wide terminal)')
     parser.add_argument('--min-width', type=int, default=140,
-                       help='Minimum terminal width for CPU view (default: 140)')
+                       help='Minimum terminal width for live visualization (default: 140)')
     parser.add_argument('--clock-hz', type=int, default=1000,
                        help='CPU clock frequency in Hz (1-10000, default: 1000)')
     parser.add_argument('--no-clock', action='store_true',
@@ -185,39 +181,37 @@ def main():
         vm.load_program(source)
         print(f"Loaded {len(vm.instructions)} instructions")
         
-        # Create visualizer if CPU view is requested
+        # Create visualizer if live display or step mode is requested
         visualizer = None
-        if args.cpu_view or args.step:
+        if args.live_display or args.step:
             visualizer = VMVisualizer(vm, show_cpu=True, min_width=args.min_width)
             if visualizer.print_terminal_warning():
                 print()  # Extra line after warning
         
         if args.step:
-            # Step-by-step execution with new visualizer
+            # Step-by-step execution with visualizer
             if visualizer and visualizer.can_show_split:
-                # Use new visual step mode
+                # Use visual step mode with CPU panel
                 run_visual_step_mode(vm, visualizer, args)
             else:
                 # Fall back to old text-based step mode
                 run_text_step_mode(vm, args)
         else:
             # Run to completion
-            if not args.live_display:
+            if not visualizer:
                 print(f"\nExecuting program...")
             
             count = vm.run(
                 max_instructions=args.max_instructions,
-                live_display=args.live_display,
-                update_interval=args.update_interval,
                 visualizer=visualizer
             )
             
-            if not args.live_display:
+            if not visualizer:
                 print(f"\nExecution completed:")
                 print(f"  Instructions executed: {count}")
                 print(f"  Final PC: 0x{vm.cpu.pc:08X}")
             else:
-                # In live mode, show final stats after display
+                # In live visualization mode, show final stats after display
                 print(f"\n\nExecution completed:")
                 print(f"  Instructions executed: {count}")
                 print(f"  Final PC: 0x{vm.cpu.pc:08X}")
@@ -225,7 +219,7 @@ def main():
             if args.debug:
                 vm.dump_state()
             
-            if not args.no_display and not args.live_display:
+            if not args.no_display and not visualizer:
                 print("\nDisplay output:")
                 vm.display.render()
     
