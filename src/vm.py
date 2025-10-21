@@ -4,6 +4,7 @@ Main execution engine that ties together CPU, Memory, Display, and Assembler
 """
 
 import logging
+from typing import Optional
 
 from .cpu import CPU
 from .memory import Memory, MemoryAccessError, MemoryProtectionError
@@ -12,12 +13,58 @@ from .timer import Timer
 from .realtime_timer import RealTimeTimer
 from .assembler import Assembler, AssemblerError
 from .instruction import InstructionType
+from .debugger import format_exception_report
 
 logger = logging.getLogger(__name__)
 
 class VMError(Exception):
-    """Base exception for VM errors"""
-    pass
+    """
+    Enhanced VM exception with detailed debugging information
+    
+    This exception captures the full state of the VM at the time of the error,
+    including CPU registers, stack, instruction context, and more.
+    """
+    
+    def __init__(self, message: str, cpu=None, memory=None, instructions=None, 
+                 fault_address: Optional[int] = None, original_exception: Optional[Exception] = None):
+        """
+        Initialize VMError with debugging context
+        
+        Args:
+            message: Error message
+            cpu: CPU instance at time of error
+            memory: Memory instance at time of error
+            instructions: List of instructions
+            fault_address: Memory address that caused the fault (if applicable)
+            original_exception: The original exception that was caught
+        """
+        super().__init__(message)
+        self.cpu = cpu
+        self.memory = memory
+        self.instructions = instructions
+        self.fault_address = fault_address
+        self.original_exception = original_exception
+        self.detailed_report = None
+        
+        # Generate detailed report if we have the necessary context
+        # Only generate if we're not already a VMError being re-raised
+        if cpu and memory and not isinstance(original_exception, VMError):
+            try:
+                self.detailed_report = format_exception_report(
+                    cpu, memory, instructions or [], 
+                    original_exception or self,
+                    fault_address
+                )
+            except Exception as e:
+                # If report generation fails, at least preserve the basic error
+                logger.error(f"Failed to generate exception report: {e}")
+                self.detailed_report = None
+    
+    def __str__(self):
+        """Return detailed error report if available, otherwise basic message"""
+        if self.detailed_report:
+            return self.detailed_report
+        return super().__str__()
 
 class VirtualMachine:
     """
@@ -132,7 +179,12 @@ class VirtualMachine:
         # Check if PC is valid
         instruction_index = self.cpu.pc // 4
         if instruction_index < 0 or instruction_index >= len(self.instructions):
-            raise VMError(f"PC out of bounds: 0x{self.cpu.pc:08X}")
+            raise VMError(
+                f"PC out of bounds: 0x{self.cpu.pc:08X}",
+                cpu=self.cpu,
+                memory=self.memory,
+                instructions=self.instructions
+            )
         
         # Fetch instruction
         instruction = self.instructions[instruction_index]
@@ -149,8 +201,35 @@ class VirtualMachine:
         try:
             self._execute(instruction)
             self.cpu.instruction_count += 1
+        except (MemoryAccessError, MemoryProtectionError) as e:
+            # Extract fault address from memory errors if possible
+            fault_addr = None
+            error_msg = str(e)
+            # Try to parse address from error message (e.g., "Memory access out of bounds: 0x12345678")
+            import re
+            addr_match = re.search(r'0x([0-9A-Fa-f]+)', error_msg)
+            if addr_match:
+                try:
+                    fault_addr = int(addr_match.group(1), 16)
+                except ValueError:
+                    pass
+            
+            raise VMError(
+                f"Execution error at PC=0x{self.cpu.pc:08X}: {e}",
+                cpu=self.cpu,
+                memory=self.memory,
+                instructions=self.instructions,
+                fault_address=fault_addr,
+                original_exception=e
+            )
         except Exception as e:
-            raise VMError(f"Execution error at PC=0x{self.cpu.pc:08X}: {e}")
+            raise VMError(
+                f"Execution error at PC=0x{self.cpu.pc:08X}: {e}",
+                cpu=self.cpu,
+                memory=self.memory,
+                instructions=self.instructions,
+                original_exception=e
+            )
         
         return not self.cpu.halted
     
@@ -254,7 +333,12 @@ class VirtualMachine:
                 return  # Don't increment PC again
         
         else:
-            raise VMError(f"Unknown instruction type: {instruction.type}")
+            raise VMError(
+                f"Unknown instruction type: {instruction.type}",
+                cpu=self.cpu,
+                memory=self.memory,
+                instructions=self.instructions
+            )
     
     def _execute_r_type(self, inst):
         """Execute R-type instruction"""
@@ -334,7 +418,12 @@ class VirtualMachine:
             else:
                 result = rs1_val % rs2_val
         else:
-            raise VMError(f"Unknown R-type instruction: {inst.opcode}")
+            raise VMError(
+                f"Unknown R-type instruction: {inst.opcode}",
+                cpu=self.cpu,
+                memory=self.memory,
+                instructions=self.instructions
+            )
         
         self.cpu.write_register(inst.rd, result)
         self.cpu.increment_pc()
@@ -440,7 +529,12 @@ class VirtualMachine:
             old_value = self.cpu.clear_csr_bits(csr_addr, uimm)
             self.cpu.write_register(inst.rd, old_value)
         else:
-            raise VMError(f"Unknown I-type instruction: {inst.opcode}")
+            raise VMError(
+                f"Unknown I-type instruction: {inst.opcode}",
+                cpu=self.cpu,
+                memory=self.memory,
+                instructions=self.instructions
+            )
         
         self.cpu.increment_pc()
     
@@ -462,7 +556,12 @@ class VirtualMachine:
             self.memory.write_byte(addr, rs2_val & 0xFF)
             self.memory.write_byte(addr + 1, (rs2_val >> 8) & 0xFF)
         else:
-            raise VMError(f"Unknown S-type instruction: {inst.opcode}")
+            raise VMError(
+                f"Unknown S-type instruction: {inst.opcode}",
+                cpu=self.cpu,
+                memory=self.memory,
+                instructions=self.instructions
+            )
         
         self.cpu.increment_pc()
     
@@ -486,7 +585,12 @@ class VirtualMachine:
         elif inst.opcode == 'BGEU':
             branch_taken = (rs1_val >= rs2_val)
         else:
-            raise VMError(f"Unknown B-type instruction: {inst.opcode}")
+            raise VMError(
+                f"Unknown B-type instruction: {inst.opcode}",
+                cpu=self.cpu,
+                memory=self.memory,
+                instructions=self.instructions
+            )
         
         if branch_taken:
             offset = self.cpu.sign_extend(inst.imm & 0x1FFF, 13)
@@ -518,7 +622,12 @@ class VirtualMachine:
             self.cpu.write_register(inst.rd, return_addr)
             self.cpu.set_pc(new_pc)
         else:
-            raise VMError(f"Unknown J-type instruction: {inst.opcode}")
+            raise VMError(
+                f"Unknown J-type instruction: {inst.opcode}",
+                cpu=self.cpu,
+                memory=self.memory,
+                instructions=self.instructions
+            )
     
     def _execute_u_type(self, inst):
         """Execute U-type instruction"""
@@ -531,7 +640,12 @@ class VirtualMachine:
             value = ((inst.imm & 0xFFFFF) << 12) + self.cpu.pc
             self.cpu.write_register(inst.rd, value & 0xFFFFFFFF)
         else:
-            raise VMError(f"Unknown U-type instruction: {inst.opcode}")
+            raise VMError(
+                f"Unknown U-type instruction: {inst.opcode}",
+                cpu=self.cpu,
+                memory=self.memory,
+                instructions=self.instructions
+            )
         
         self.cpu.increment_pc()
     
