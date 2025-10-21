@@ -30,16 +30,17 @@ uv run python main.py examples/hello.asm
 # Enable debug mode
 ./run.sh -d examples/counter.asm
 
-# Control CPU speed (NEW!)
+# Control CPU speed
 ./run.sh examples/hello.asm --clock-hz 100     # 100 Hz (slow motion)
 ./run.sh examples/hello.asm --clock-hz 10000   # 10 kHz (fast)
 ./run.sh examples/hello.asm --no-clock         # Maximum speed
 
-# Step through execution with live visualization (NEW!)
+# Live visualization with display + CPU state panel
+./run.sh -l examples/clock.asm
+
+# Step through execution with live visualization
 ./run.sh -s -l examples/test.asm
 
-# Live visualization with display + CPU state panel (NEW!)
-./run.sh -l examples/clock.asm
 ```
 
 ## Features
@@ -47,7 +48,7 @@ uv run python main.py examples/hello.asm
 - **32-bit RISC Architecture**: Based on RISC-V instruction set
 - **32 General-Purpose Registers**: x0-x31 (x0 hardwired to zero)
 - **Label Support**: Use labels directly in instructions instead of manual address calculation
-- **Configurable CPU Clock**: Simulate real CPU execution speed (1 Hz - 10 kHz, or unlimited) (NEW!)
+- **Configurable CPU Clock**: Simulate real CPU execution speed (1 Hz - 10 kHz, or unlimited)
   - Default 1 kHz (1ms per instruction)
   - Educational tool for understanding code optimization impact
   - Can be disabled for maximum speed
@@ -63,7 +64,7 @@ uv run python main.py examples/hello.asm
 - **Two Hardware Timers**: Cycle-based (deterministic) and real-time (wall-clock) timers
 - **Interrupt Support**: Hardware interrupts with CSR-based control
 - **Debug Mode**: Step-through execution with register inspection
-- **Live Visualization**: Real-time display of both screen output and CPU state (NEW!)
+- **Live Visualization**: Real-time display of both screen output and CPU state
   - Side-by-side display and CPU state panels
   - Change tracking with highlighted registers
   - Instruction preview in step mode
@@ -192,6 +193,37 @@ See [docs/LABEL_SUPPORT.md](docs/LABEL_SUPPORT.md) for detailed documentation.
 **Examples:**
 - `examples/label_demo.asm` - Simple label usage demonstration
 - `examples/clock_with_labels.asm` - Clock example using label-based addressing
+
+### Character Literals
+
+The assembler supports character literals for improved readability:
+
+```asm
+# Instead of hard-coding ASCII values:
+ADDI x1, x0, 65        # What is 65?
+
+# Use character literals:
+ADDI x1, x0, 'A'       # Much clearer!
+
+# Supported escape sequences:
+ADDI x2, x0, '\n'      # Newline (10)
+ADDI x3, x0, '\t'      # Tab (9)
+ADDI x4, x0, '\r'      # Carriage return (13)
+ADDI x5, x0, '\0'      # Null (0)
+ADDI x6, x0, '\''      # Single quote (39)
+ADDI x7, x0, '\\'      # Backslash (92)
+
+# All printable ASCII characters supported:
+ADDI x8, x0, ' '       # Space
+ADDI x9, x0, '0'       # Digit
+ADDI x10, x0, '!'      # Punctuation
+```
+
+Character literals are converted to their ASCII values during assembly, making code more self-documenting and eliminating the need to look up ASCII codes.
+
+**Examples:**
+- `examples/simple_a.asm` - Minimal character literal example
+- `examples/test_char_literals.asm` - Comprehensive test of all features
 
 ### Comments
 

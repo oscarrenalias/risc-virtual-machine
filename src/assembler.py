@@ -58,7 +58,11 @@ class Assembler:
         """
         lines = []
         for line in source.split('\n'):
-            # Remove comments
+            # Remove comments (but be careful not to remove comment chars inside character literals)
+            # Simple approach: process char literals first, THEN remove comments
+            line = self._preprocess_char_literals(line)
+            
+            # Now remove comments (safe since char literals are already converted to numbers)
             if '#' in line:
                 line = line[:line.index('#')]
             if ';' in line:
@@ -72,6 +76,77 @@ class Assembler:
                 lines.append(line)
         
         return lines
+    
+    def _preprocess_char_literals(self, line):
+        """
+        Convert character literals ('A', '\n', etc.) to their ASCII values
+        
+        Args:
+            line: Assembly line that may contain character literals
+            
+        Returns:
+            Line with character literals replaced by numeric values
+        """
+        def replace_char(match):
+            """Replace a single character literal match"""
+            char_content = match.group(1)
+            
+            # Handle escape sequences
+            if len(char_content) == 2 and char_content[0] == '\\':
+                escape_map = {
+                    'n': 10,   # newline
+                    't': 9,    # tab
+                    'r': 13,   # carriage return
+                    '0': 0,    # null
+                    "'": 39,   # single quote
+                    '\\': 92   # backslash
+                }
+                escape_char = char_content[1]
+                if escape_char in escape_map:
+                    return str(escape_map[escape_char])
+                else:
+                    raise AssemblerError(f"Unknown escape sequence: '\\{escape_char}'")
+            
+            # Handle single character
+            elif len(char_content) == 1:
+                return str(ord(char_content))
+            
+            # Handle empty or multi-character (error)
+            elif len(char_content) == 0:
+                raise AssemblerError("Empty character literal ''")
+            else:
+                raise AssemblerError(f"Multi-character literal not supported: '{char_content}'")
+        
+        # First check for invalid character literals (empty or multi-char) and raise errors
+        # Check for empty character literal '' (but not '\'' which is escaped quote)
+        # Look for '' that's not preceded by backslash
+        if re.search(r"(?<!\\)''", line):
+            raise AssemblerError("Empty character literal ''")
+        
+        # Check for multi-character literals (simple heuristic: more than 2 chars between quotes)
+        # This catches 'AB', 'ABC', etc. but allows '\n' (2 chars for escape)
+        multi_char_pattern = r"'[^']{3,}'"
+        if re.search(multi_char_pattern, line):
+            match = re.search(multi_char_pattern, line)
+            raise AssemblerError(f"Multi-character literal not supported: {match.group(0)}")
+        
+        # Also catch cases like 'AB' (2 non-escape chars)
+        two_char_pattern = r"'[^'\\]{2}'"
+        if re.search(two_char_pattern, line):
+            match = re.search(two_char_pattern, line)
+            raise AssemblerError(f"Multi-character literal not supported: {match.group(0)}")
+        
+        # Now match and replace valid single-quoted character literals: 'X' or '\n'
+        # Pattern: ' followed by (single non-quote/backslash char OR backslash+char) followed by '
+        pattern = r"'([^'\\]|\\.)'"
+        
+        try:
+            return re.sub(pattern, replace_char, line)
+        except AssemblerError:
+            # Re-raise assembler errors as-is
+            raise
+        except Exception as e:
+            raise AssemblerError(f"Error processing character literal: {str(e)}")
     
     def _first_pass(self, lines):
         """
