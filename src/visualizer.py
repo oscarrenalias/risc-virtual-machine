@@ -130,8 +130,8 @@ class VMVisualizer:
         Args:
             instruction_count: Current instruction count
         """
-        # Render main panels without clearing (for smooth updates)
-        self.render(show_next_instruction=False, clear_screen=False)
+        # Clear screen and render main panels (for in-place updates)
+        self.render(show_next_instruction=False, clear_screen=True)
         
         # Show execution stats
         self.console.print()
