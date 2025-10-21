@@ -1,5 +1,10 @@
 # RISC Virtual Machine
 
+[![Test Suite](https://github.com/oscarrenalias/risc-virtual-machine/actions/workflows/tests.yml/badge.svg)](https://github.com/oscarrenalias/risc-virtual-machine/actions/workflows/tests.yml)
+[![Coverage](https://img.shields.io/badge/coverage-70%25-brightgreen.svg)](./TESTING.md)
+[![Python](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A 32-bit RISC assembly interpreter written in Python with memory-mapped display output.
 
 This is a pet project that I implemented over the weekend, for the fun of it, with the help of GitHub Copilot.
@@ -449,25 +454,78 @@ uv sync
 
 ### Running Tests
 
-Create unit tests for individual components:
+The project has a comprehensive 3-layer test suite with **199 tests** and **70% code coverage**:
 
-```python
-from vm import VirtualMachine
+```bash
+# Run all tests (unit + integration + program)
+./run_tests.sh
 
-vm = VirtualMachine()
-vm.load_program("""
-ADDI x1, x0, 42
-HALT
-""")
-vm.run()
-assert vm.cpu.read_register(1) == 42
+# Run with coverage report
+./run_tests.sh --coverage
+
+# Run specific test layer
+./run_tests.sh --test tests/unit/        # Unit tests only
+./run_tests.sh --test tests/integration/ # Integration tests only
+./run_tests.sh --test tests/programs/    # Program tests only
+
+# Run verbose
+./run_tests.sh -v
+
+# Skip slow tests
+./run_tests.sh --fast
 ```
+
+**Test Layers:**
+- **Layer 1 (Unit)**: 154 tests - Component isolation (CPU, Memory, Timer, etc.)
+- **Layer 2 (Integration)**: 30 tests - Full VM instruction execution
+- **Layer 3 (Program)**: 15 tests - Complete realistic programs (factorial, fibonacci, etc.)
+
+See [TESTING.md](TESTING.md) for complete testing documentation.
+
+### Continuous Integration
+
+Every commit triggers automated testing via GitHub Actions:
+- ✅ Full test suite (199 tests) runs on Ubuntu with Python 3.13
+- ✅ Coverage threshold enforced (≥65%, currently 70%)
+- ✅ Coverage reports uploaded as artifacts
+
+View workflow results in the [Actions tab](https://github.com/oscarrenalias/risc-virtual-machine/actions).
 
 ### Adding New Instructions
 
 1. Add to `INSTRUCTION_SET` in `instruction.py`
 2. Implement execution logic in `vm.py`
-3. Add test cases
+3. Add unit tests in `tests/unit/`
+4. Add integration test in `tests/integration/test_instructions.py`
+5. Optionally add program test using the instruction
+
+### Writing Tests
+
+```python
+# Unit test example
+def test_cpu_register(cpu):
+    cpu.write_register(1, 42)
+    assert cpu.read_register(1) == 42
+
+# Integration test example  
+def test_add_instruction(vm):
+    program = """
+    ADDI x1, x0, 10
+    ADDI x2, x0, 20
+    ADD x3, x1, x2
+    HALT
+    """
+    result = run_and_get_register(vm, program, 3)
+    assert result == 30
+
+# Program test example
+def test_factorial(vm):
+    # Complete factorial program
+    result = run_and_get_register(vm, program, 11)
+    assert result == 120
+```
+
+See [tests/README.md](tests/README.md) and [docs/PROGRAM_TESTING.md](docs/PROGRAM_TESTING.md) for detailed guides.
 
 ## Future Enhancements
 

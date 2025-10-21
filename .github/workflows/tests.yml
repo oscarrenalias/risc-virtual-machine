@@ -1,0 +1,92 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop, feature/*, fix/* ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.13"
+    
+    - name: Install UV
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    
+    - name: Verify UV installation
+      run: uv --version
+    
+    - name: Install dependencies
+      run: uv sync
+    
+    - name: Run full test suite with coverage
+      id: tests
+      run: |
+        uv run pytest tests/ \
+          --cov=src \
+          --cov-report=term-missing \
+          --cov-report=xml \
+          --cov-report=html \
+          -v | tee test_output.txt
+        
+        # Extract coverage percentage from output
+        COVERAGE=$(grep -oP 'TOTAL\s+\d+\s+\d+\s+\K\d+' coverage.xml 2>/dev/null || echo "unknown")
+        echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+        
+        # Check minimum threshold (you can adjust this)
+        MIN_COVERAGE=60
+        if [ "$COVERAGE" != "unknown" ] && [ "$COVERAGE" -lt "$MIN_COVERAGE" ]; then
+          echo "Coverage $COVERAGE% is below minimum threshold of $MIN_COVERAGE%"
+          exit 1
+        fi
+    
+    - name: Upload coverage reports to Codecov
+      if: success()
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    
+    - name: Archive coverage HTML report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: htmlcov/
+        retention-days: 30
+    
+    - name: Generate test summary
+      if: always()
+      run: |
+        echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "✅ All tests passed on Ubuntu with Python 3.13" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          COVERAGE="${{ steps.tests.outputs.coverage }}"
+          if [ "$COVERAGE" != "unknown" ]; then
+            echo "**Coverage:** ${COVERAGE}%" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Coverage:** Available in artifacts" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "❌ Tests failed - check logs above for details" >> $GITHUB_STEP_SUMMARY
+        fi
+          echo "❌ Tests failed - check logs above for details" >> $GITHUB_STEP_SUMMARY
+        fi
