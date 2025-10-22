@@ -15,6 +15,10 @@ This is a 32-bit RISC assembly interpreter written in Python that simulates a RI
 ### Architecture
 - 32-bit RISC architecture based on RISC-V
 - 32 general-purpose registers (x0-x31, x0 hardwired to zero)
+- Full RISC-V ABI register name support (zero, ra, sp, gp, tp, t0-t6, s0-s11, a0-a7, fp)
+  - Both x-notation and ABI names are supported
+  - Can be used interchangeably in assembly code
+  - Display shows both notations: "x10/a0"
 - 1024MB memory (0x40000000 max)
 - Memory-mapped regions:
   - Display: 0x10000000-0x100007CF (80x25 text)

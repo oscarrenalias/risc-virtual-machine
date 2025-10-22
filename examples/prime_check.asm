@@ -1,72 +1,73 @@
 # Prime Number Checker
 # Uses MUL, DIV, and REM to check if a number is prime
+# Uses RISC-V ABI register names for clarity
 
 # Number to check (change this to test different numbers)
-ADDI x1, x0, 17         # Number to test (17 is prime)
+ADDI a0, zero, 17       # Number to test (17 is prime)
 
 # Handle special cases
-ADDI x2, x0, 2
-BLT x1, x2, not_prime   # Numbers < 2 are not prime
+ADDI a1, zero, 2
+BLT a0, a1, not_prime   # Numbers < 2 are not prime
 
-BEQ x1, x2, is_prime    # 2 is prime
+BEQ a0, a1, is_prime    # 2 is prime
 
 # Check if even (divisible by 2)
-REM x3, x1, x2
-BEQ x3, x0, not_prime   # If remainder is 0, not prime
+REM a2, a0, a1
+BEQ a2, zero, not_prime # If remainder is 0, not prime
 
 # Check odd divisors from 3 to sqrt(n)
-ADDI x4, x0, 3          # Current divisor
-ADDI x5, x0, 2          # Increment by 2 (check odd numbers only)
+ADDI t0, zero, 3        # Current divisor
+ADDI t1, zero, 2        # Increment by 2 (check odd numbers only)
 
 check_loop:
     # Check if divisor^2 > n (using multiplication)
-    MUL x6, x4, x4      # x6 = divisor^2
-    BLT x1, x6, is_prime # If n < divisor^2, we're done (is prime)
+    MUL t2, t0, t0      # t2 = divisor^2
+    BLT a0, t2, is_prime # If n < divisor^2, we're done (is prime)
     
     # Check if n is divisible by current divisor
-    REM x7, x1, x4      # x7 = n % divisor
-    BEQ x7, x0, not_prime # If remainder is 0, not prime
+    REM t3, a0, t0      # t3 = n % divisor
+    BEQ t3, zero, not_prime # If remainder is 0, not prime
     
     # Move to next odd divisor
-    ADD x4, x4, x5      # divisor += 2
-    JAL x0, check_loop
+    ADD t0, t0, t1      # divisor += 2
+    JAL zero, check_loop
 
 is_prime:
     # Display "PRIME" on screen
-    LUI x28, 0xF0       # Display base address
-    ADDI x29, x0, 80    # ASCII 'P'
-    SW x29, 0(x28)
-    ADDI x29, x0, 82    # ASCII 'R'
-    SW x29, 4(x28)
-    ADDI x29, x0, 73    # ASCII 'I'
-    SW x29, 8(x28)
-    ADDI x29, x0, 77    # ASCII 'M'
-    SW x29, 12(x28)
-    ADDI x29, x0, 69    # ASCII 'E'
-    SW x29, 16(x28)
-    JAL x0, done
+    LUI s0, 0xF0        # Display base address
+    ADDI s1, zero, 80   # ASCII 'P'
+    SW s1, 0(s0)
+    ADDI s1, zero, 82   # ASCII 'R'
+    SW s1, 4(s0)
+    ADDI s1, zero, 73   # ASCII 'I'
+    SW s1, 8(s0)
+    ADDI s1, zero, 77   # ASCII 'M'
+    SW s1, 12(s0)
+    ADDI s1, zero, 69   # ASCII 'E'
+    SW s1, 16(s0)
+    JAL zero, done
 
 not_prime:
     # Display "NOT PRIME" on screen
-    LUI x28, 0xF0       # Display base address
-    ADDI x29, x0, 78    # ASCII 'N'
-    SW x29, 0(x28)
-    ADDI x29, x0, 79    # ASCII 'O'
-    SW x29, 4(x28)
-    ADDI x29, x0, 84    # ASCII 'T'
-    SW x29, 8(x28)
-    ADDI x29, x0, 32    # ASCII space
-    SW x29, 12(x28)
-    ADDI x29, x0, 80    # ASCII 'P'
-    SW x29, 16(x28)
-    ADDI x29, x0, 82    # ASCII 'R'
-    SW x29, 20(x28)
-    ADDI x29, x0, 73    # ASCII 'I'
-    SW x29, 24(x28)
-    ADDI x29, x0, 77    # ASCII 'M'
-    SW x29, 28(x28)
-    ADDI x29, x0, 69    # ASCII 'E'
-    SW x29, 32(x28)
+    LUI s0, 0xF0        # Display base address
+    ADDI s1, zero, 78   # ASCII 'N'
+    SW s1, 0(s0)
+    ADDI s1, zero, 79   # ASCII 'O'
+    SW s1, 4(s0)
+    ADDI s1, zero, 84   # ASCII 'T'
+    SW s1, 8(s0)
+    ADDI s1, zero, 32   # ASCII space
+    SW s1, 12(s0)
+    ADDI s1, zero, 80   # ASCII 'P'
+    SW s1, 16(s0)
+    ADDI s1, zero, 82   # ASCII 'R'
+    SW s1, 20(s0)
+    ADDI s1, zero, 73   # ASCII 'I'
+    SW s1, 24(s0)
+    ADDI s1, zero, 77   # ASCII 'M'
+    SW s1, 28(s0)
+    ADDI s1, zero, 69   # ASCII 'E'
+    SW s1, 32(s0)
 
 done:
     HALT

@@ -95,8 +95,11 @@ class CPU:
         """
         Parse register identifier to register number
         
+        Supports both x-notation (x0-x31) and RISC-V ABI names
+        (zero, ra, sp, gp, tp, t0-t6, s0-s11, a0-a7, fp)
+        
         Args:
-            reg: Register number (int) or name (str like 'x5')
+            reg: Register number (int) or name (str like 'x5', 't0', 'a0')
             
         Returns:
             Register number (0-31)
@@ -113,15 +116,30 @@ class CPU:
                 except ValueError:
                     pass
             
-            # Handle named registers
+            # Complete RISC-V ABI name aliases
             aliases = {
+                # Special registers
                 'zero': 0,
                 'ra': 1,    # Return address
                 'sp': 2,    # Stack pointer
                 'gp': 3,    # Global pointer
                 'tp': 4,    # Thread pointer
-                'fp': 8,    # Frame pointer (alias for x8/s0)
-                's0': 8,
+                
+                # Temporary registers
+                't0': 5, 't1': 6, 't2': 7,
+                't3': 28, 't4': 29, 't5': 30, 't6': 31,
+                
+                # Saved registers
+                's0': 8, 's1': 9, 's2': 18, 's3': 19,
+                's4': 20, 's5': 21, 's6': 22, 's7': 23,
+                's8': 24, 's9': 25, 's10': 26, 's11': 27,
+                
+                # Function arguments / return values
+                'a0': 10, 'a1': 11, 'a2': 12, 'a3': 13,
+                'a4': 14, 'a5': 15, 'a6': 16, 'a7': 17,
+                
+                # Frame pointer (alias for s0)
+                'fp': 8,
             }
             if reg in aliases:
                 return aliases[reg]
@@ -163,34 +181,38 @@ class CPU:
         """Return a formatted string of all register values"""
         lines = []
         lines.append(f"PC: 0x{self.pc:08X}  Instructions: {self.instruction_count}")
-        lines.append("-" * 70)
+        lines.append("-" * 90)
         
-        # Print registers in 4 columns
-        for i in range(0, self.NUM_REGISTERS, 4):
+        # Print registers in 2 columns (wider format to accommodate ABI names)
+        for i in range(0, self.NUM_REGISTERS, 2):
             reg_strs = []
-            for j in range(4):
+            for j in range(2):
                 reg_num = i + j
                 if reg_num < self.NUM_REGISTERS:
                     name = self._get_register_name(reg_num)
                     value = self.registers[reg_num]
-                    reg_strs.append(f"{name:4s}: 0x{value:08X}")
+                    reg_strs.append(f"{name:12s}: 0x{value:08X}")
             lines.append("  ".join(reg_strs))
         
         return "\n".join(lines)
     
     def _get_register_name(self, reg_num):
-        """Get conventional name for register"""
-        names = {
-            0: 'x0', 1: 'x1', 2: 'x2', 3: 'x3',
-            4: 'x4', 5: 'x5', 6: 'x6', 7: 'x7',
-            8: 'x8', 9: 'x9', 10: 'x10', 11: 'x11',
-            12: 'x12', 13: 'x13', 14: 'x14', 15: 'x15',
-            16: 'x16', 17: 'x17', 18: 'x18', 19: 'x19',
-            20: 'x20', 21: 'x21', 22: 'x22', 23: 'x23',
-            24: 'x24', 25: 'x25', 26: 'x26', 27: 'x27',
-            28: 'x28', 29: 'x29', 30: 'x30', 31: 'x31',
+        """Get conventional name for register with both x-notation and ABI name"""
+        # RISC-V ABI names
+        abi_names = {
+            0: 'zero', 1: 'ra', 2: 'sp', 3: 'gp', 4: 'tp',
+            5: 't0', 6: 't1', 7: 't2',
+            8: 's0/fp', 9: 's1',
+            10: 'a0', 11: 'a1', 12: 'a2', 13: 'a3', 14: 'a4', 15: 'a5', 16: 'a6', 17: 'a7',
+            18: 's2', 19: 's3', 20: 's4', 21: 's5', 22: 's6', 23: 's7',
+            24: 's8', 25: 's9', 26: 's10', 27: 's11',
+            28: 't3', 29: 't4', 30: 't5', 31: 't6',
         }
-        return names.get(reg_num, f'x{reg_num}')
+        abi = abi_names.get(reg_num, '')
+        # Return format: "x10/a0" or just "x0" if no ABI name
+        if abi:
+            return f'x{reg_num}/{abi}'
+        return f'x{reg_num}'
     
     def sign_extend(self, value, bits):
         """

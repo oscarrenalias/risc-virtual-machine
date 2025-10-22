@@ -152,27 +152,45 @@ def parse_register(reg_str):
     """
     Parse a register string to register number
     
+    Supports both x-notation (x0-x31) and RISC-V ABI names
+    (zero, ra, sp, gp, tp, t0-t6, s0-s11, a0-a7, fp)
+    
     Args:
-        reg_str: Register string like 'x5' or '5'
+        reg_str: Register string like 'x5', 't0', 'a0', or '5'
         
     Returns:
         Register number (0-31)
     """
     reg_str = reg_str.strip().lower()
     
-    # Handle register names
+    # Handle register names (x-notation)
     if reg_str.startswith('x'):
         reg_str = reg_str[1:]
     
-    # Handle aliases
+    # Complete RISC-V ABI name aliases
     aliases = {
+        # Special registers
         'zero': 0,
-        'ra': 1,
-        'sp': 2,
-        'gp': 3,
-        'tp': 4,
+        'ra': 1,    # Return address
+        'sp': 2,    # Stack pointer
+        'gp': 3,    # Global pointer
+        'tp': 4,    # Thread pointer
+        
+        # Temporary registers
+        't0': 5, 't1': 6, 't2': 7,
+        't3': 28, 't4': 29, 't5': 30, 't6': 31,
+        
+        # Saved registers
+        's0': 8, 's1': 9, 's2': 18, 's3': 19,
+        's4': 20, 's5': 21, 's6': 22, 's7': 23,
+        's8': 24, 's9': 25, 's10': 26, 's11': 27,
+        
+        # Function arguments / return values
+        'a0': 10, 'a1': 11, 'a2': 12, 'a3': 13,
+        'a4': 14, 'a5': 15, 'a6': 16, 'a7': 17,
+        
+        # Frame pointer (alias for s0)
         'fp': 8,
-        's0': 8,
     }
     
     if reg_str in aliases:

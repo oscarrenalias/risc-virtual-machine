@@ -1,43 +1,44 @@
 # Fibonacci Sequence Calculator
 # Calculates first N Fibonacci numbers and displays them
+# Uses RISC-V ABI register names for clarity
 
 .text
 main:
     # Initialize Fibonacci sequence
-    ADDI x5, x0, 0          # x5 = fib(0) = 0
-    ADDI x6, x0, 1          # x6 = fib(1) = 1
-    ADDI x7, x0, 10         # x7 = counter (calculate 10 numbers)
+    ADDI t0, zero, 0        # t0 = fib(0) = 0
+    ADDI t1, zero, 1        # t1 = fib(1) = 1
+    ADDI t2, zero, 10       # t2 = counter (calculate 10 numbers)
     
     # Display base address
-    LUI x10, 0xF0           # x10 = 0xF0000
-    ADDI x11, x0, 0         # x11 = display offset
+    LUI a0, 0xF0            # a0 = 0xF0000 (display buffer)
+    ADDI a1, zero, 0        # a1 = display offset
     
 fib_loop:
     # Check if done
-    BEQ x7, x0, done
+    BEQ t2, zero, done
     
-    # Display current Fibonacci number (x5)
+    # Display current Fibonacci number (t0)
     # Convert to ASCII digit (only works for 0-9)
-    ADDI x12, x5, 48        # Add ASCII '0'
-    ADD x13, x10, x11       # Calculate display address
-    SW x12, 0(x13)          # Write to display
+    ADDI a2, t0, 48         # Add ASCII '0'
+    ADD a3, a0, a1          # Calculate display address
+    SW a2, 0(a3)            # Write to display
     
     # Add space
-    ADDI x11, x11, 4
-    ADDI x12, x0, 32        # Space character
-    ADD x13, x10, x11
-    SW x12, 0(x13)
+    ADDI a1, a1, 4
+    ADDI a2, zero, 32       # Space character
+    ADD a3, a0, a1
+    SW a2, 0(a3)
     
     # Calculate next Fibonacci number
-    ADD x8, x5, x6          # x8 = fib(n) + fib(n-1)
-    ADDI x5, x6, 0          # x5 = old x6
-    ADDI x6, x8, 0          # x6 = new fib
+    ADD t3, t0, t1          # t3 = fib(n) + fib(n-1)
+    ADDI t0, t1, 0          # t0 = old t1
+    ADDI t1, t3, 0          # t1 = new fib
     
     # Increment offset and decrement counter
-    ADDI x11, x11, 4
-    ADDI x7, x7, -1
+    ADDI a1, a1, 4
+    ADDI t2, t2, -1
     
-    JAL x0, fib_loop
+    JAL zero, fib_loop
 
 done:
     HALT

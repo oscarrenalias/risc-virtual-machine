@@ -1,31 +1,32 @@
 # Counter Program
 # Counts from 0 to 9 and displays each number
+# Uses RISC-V ABI register names
 
 .text
 main:
     # Initialize counter
-    ADDI x5, x0, 0          # x5 = counter = 0
-    ADDI x6, x0, 10         # x6 = limit = 10
+    ADDI t0, zero, 0        # t0 = counter = 0
+    ADDI t1, zero, 10       # t1 = limit = 10
     
     # Display base address
-    LUI x10, 0xF0           # x10 = 0xF0000
+    LUI a0, 0xF0            # a0 = 0xF0000 (display buffer)
     
 loop:
     # Check if done
-    BEQ x5, x6, done
+    BEQ t0, t1, done
     
     # Convert counter to ASCII digit
-    ADDI x11, x5, 48        # x11 = counter + '0'
+    ADDI a1, t0, 48         # a1 = counter + '0'
     
     # Write to display
-    SW x11, 0(x10)
+    SW a1, 0(a0)
     
     # Increment counter and display position
-    ADDI x5, x5, 1
-    ADDI x10, x10, 4
+    ADDI t0, t0, 1
+    ADDI a0, a0, 4
     
     # Continue loop
-    JAL x0, loop
+    JAL zero, loop
 
 done:
     HALT

@@ -46,7 +46,10 @@ uv run python main.py examples/hello.asm
 ## Features
 
 - **32-bit RISC Architecture**: Based on RISC-V instruction set
-- **32 General-Purpose Registers**: x0-x31 (x0 hardwired to zero)
+- **32 General-Purpose Registers**: x0-x31 with full **RISC-V ABI name support** (zero, ra, sp, t0-t6, s0-s11, a0-a7)
+  - Use either x-notation or ABI names for more readable code
+  - Display shows both notations side-by-side
+  - See [docs/REGISTER_ABI_NAMES.md](docs/REGISTER_ABI_NAMES.md) for complete reference
 - **Label Support**: Use labels directly in instructions instead of manual address calculation
 - **Configurable CPU Clock**: Simulate real CPU execution speed (1 Hz - 10 kHz, or unlimited)
   - Default 1 kHz (1ms per instruction)
@@ -162,6 +165,39 @@ Wall-clock based timing for real-world event simulation (1 Hz - 1000 Hz).
 - `examples/clock.asm` - Real-time clock using RT timer at 1 Hz
 
 ## Assembly Language
+
+### Register Names
+
+The VM supports both **x-notation** (x0-x31) and **RISC-V ABI names** for registers. ABI names make code more readable and self-documenting:
+
+```asm
+# Both notations are supported and can be mixed:
+ADDI x10, x0, 42       # x-notation
+ADDI a0, zero, 42      # ABI names (equivalent to above)
+
+# ABI names show register purpose:
+ADDI sp, sp, -16       # Stack pointer adjustment (clearer than x2)
+SW ra, 0(sp)           # Save return address (clearer than x1)
+ADDI a0, zero, 42      # First argument/return value (clearer than x10)
+
+# Common ABI names:
+# - zero (x0): constant 0
+# - ra (x1): return address
+# - sp (x2): stack pointer
+# - a0-a7 (x10-x17): function arguments/return values
+# - t0-t6 (x5-x7, x28-x31): temporary registers
+# - s0-s11 (x8-x9, x18-x27): saved registers
+```
+
+**Register Display**: The VM shows both notations when displaying CPU state:
+```
+x0/zero    : 0x00000000
+x1/ra      : 0x00001000
+x2/sp      : 0x000BFFFC
+x10/a0     : 0x0000002A
+```
+
+For complete register reference, see [docs/REGISTER_ABI_NAMES.md](docs/REGISTER_ABI_NAMES.md).
 
 ### Label Support
 

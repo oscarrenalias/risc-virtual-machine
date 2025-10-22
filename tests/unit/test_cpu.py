@@ -108,6 +108,87 @@ class TestRegisterOperations:
         
         with pytest.raises(ValueError):
             cpu.write_register('x32', 100)
+    
+    def test_temporary_register_aliases(self, cpu):
+        """Test all temporary register ABI names (t0-t6)"""
+        # t0-t2 map to x5-x7
+        cpu.write_register('t0', 0x1111)
+        assert cpu.read_register(5) == 0x1111
+        assert cpu.read_register('x5') == 0x1111
+        
+        cpu.write_register('t1', 0x2222)
+        assert cpu.read_register(6) == 0x2222
+        
+        cpu.write_register('t2', 0x3333)
+        assert cpu.read_register(7) == 0x3333
+        
+        # t3-t6 map to x28-x31
+        cpu.write_register('t3', 0x4444)
+        assert cpu.read_register(28) == 0x4444
+        
+        cpu.write_register('t4', 0x5555)
+        assert cpu.read_register(29) == 0x5555
+        
+        cpu.write_register('t5', 0x6666)
+        assert cpu.read_register(30) == 0x6666
+        
+        cpu.write_register('t6', 0x7777)
+        assert cpu.read_register(31) == 0x7777
+    
+    def test_saved_register_aliases(self, cpu):
+        """Test all saved register ABI names (s0-s11)"""
+        # s0 is x8 (also fp)
+        cpu.write_register('s0', 0x1000)
+        assert cpu.read_register(8) == 0x1000
+        
+        # s1 is x9
+        cpu.write_register('s1', 0x2000)
+        assert cpu.read_register(9) == 0x2000
+        
+        # s2-s11 map to x18-x27
+        for i in range(2, 12):
+            value = 0x3000 + i * 0x100
+            cpu.write_register(f's{i}', value)
+            assert cpu.read_register(18 + i - 2) == value
+    
+    def test_argument_register_aliases(self, cpu):
+        """Test all argument register ABI names (a0-a7)"""
+        # a0-a7 map to x10-x17
+        for i in range(8):
+            value = 0xA000 + i * 0x100
+            cpu.write_register(f'a{i}', value)
+            assert cpu.read_register(10 + i) == value
+            assert cpu.read_register(f'x{10 + i}') == value
+    
+    def test_mixed_register_notation(self, cpu):
+        """Test using both x-notation and ABI names interchangeably"""
+        # Write with ABI name, read with x-notation
+        cpu.write_register('a0', 0xAAAA)
+        assert cpu.read_register('x10') == 0xAAAA
+        assert cpu.read_register(10) == 0xAAAA
+        
+        # Write with x-notation, read with ABI name
+        cpu.write_register('x5', 0xBBBB)
+        assert cpu.read_register('t0') == 0xBBBB
+        
+        # Write with number, read with both
+        cpu.write_register(2, 0xCCCC)
+        assert cpu.read_register('sp') == 0xCCCC
+        assert cpu.read_register('x2') == 0xCCCC
+    
+    def test_case_insensitive_abi_names(self, cpu):
+        """Test ABI register names are case-insensitive"""
+        cpu.write_register('A0', 0x1111)
+        assert cpu.read_register('a0') == 0x1111
+        
+        cpu.write_register('T0', 0x2222)
+        assert cpu.read_register('t0') == 0x2222
+        
+        cpu.write_register('S1', 0x3333)
+        assert cpu.read_register('s1') == 0x3333
+        
+        cpu.write_register('RA', 0x4444)
+        assert cpu.read_register('ra') == 0x4444
 
 
 class TestProgramCounter:

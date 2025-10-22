@@ -49,12 +49,12 @@ class CPUDebugger:
         self.memory = memory
         self.instructions = instructions or []
     
-    def dump_registers(self, columns=4) -> str:
+    def dump_registers(self, columns=2) -> str:
         """
-        Generate formatted register dump
+        Generate formatted register dump with both x-notation and ABI names
         
         Args:
-            columns: Number of columns to display registers in
+            columns: Number of columns to display registers in (default: 2)
             
         Returns:
             Formatted string with register values
@@ -75,7 +75,7 @@ class CPUDebugger:
                 
                 # Format: x0 (zero): 0x00000000 (0)
                 row_parts.append(
-                    f"x{reg_num:2d} ({reg_name:5s}): 0x{value:08X} ({signed_val:11d})"
+                    f"x{reg_num:2d} ({reg_name:6s}): 0x{value:08X} ({signed_val:11d})"
                 )
             
             lines.append("  " + " | ".join(row_parts))

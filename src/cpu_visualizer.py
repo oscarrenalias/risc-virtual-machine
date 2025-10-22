@@ -82,7 +82,7 @@ class CPUVisualizer:
         lines.append("")
         lines.append("[bold cyan]═══ Registers ═══[/bold cyan]")
         
-        # Registers in compact 2-column format
+        # Registers in compact 2-column format (wider to show both notations)
         for i in range(0, 32, 2):
             reg_line = []
             for j in range(2):
@@ -92,9 +92,9 @@ class CPUVisualizer:
                     value = cpu.registers[reg_num]
                     
                     if reg_num in self.changed_registers:
-                        reg_line.append(f"[yellow]{name:4s}:[/yellow] [bold yellow]0x{value:08X}[/bold yellow]")
+                        reg_line.append(f"[yellow]{name:10s}:[/yellow] [bold yellow]0x{value:08X}[/bold yellow]")
                     else:
-                        reg_line.append(f"[cyan]{name:4s}:[/cyan] [white]0x{value:08X}[/white]")
+                        reg_line.append(f"[cyan]{name:10s}:[/cyan] [white]0x{value:08X}[/white]")
             
             lines.append("  ".join(reg_line))
         
@@ -138,19 +138,22 @@ class CPUVisualizer:
         )
     
     def _get_register_name(self, reg_num):
-        """Get conventional name for register with ABI aliases"""
-        # Use ABI names for common registers
+        """Get register name showing both x-notation and ABI name"""
+        # RISC-V ABI names
         abi_names = {
-            0: 'zero', 1: 'ra', 2: 'sp', 3: 'gp',
-            4: 'tp', 5: 't0', 6: 't1', 7: 't2',
-            8: 's0', 9: 's1', 10: 'a0', 11: 'a1',
-            12: 'a2', 13: 'a3', 14: 'a4', 15: 'a5',
-            16: 'a6', 17: 'a7', 18: 's2', 19: 's3',
-            20: 's4', 21: 's5', 22: 's6', 23: 's7',
+            0: 'zero', 1: 'ra', 2: 'sp', 3: 'gp', 4: 'tp',
+            5: 't0', 6: 't1', 7: 't2',
+            8: 's0/fp', 9: 's1',
+            10: 'a0', 11: 'a1', 12: 'a2', 13: 'a3', 14: 'a4', 15: 'a5', 16: 'a6', 17: 'a7',
+            18: 's2', 19: 's3', 20: 's4', 21: 's5', 22: 's6', 23: 's7',
             24: 's8', 25: 's9', 26: 's10', 27: 's11',
             28: 't3', 29: 't4', 30: 't5', 31: 't6',
         }
-        return abi_names.get(reg_num, f'x{reg_num}')
+        abi = abi_names.get(reg_num, '')
+        # Return format showing both: "x10/a0" 
+        if abi:
+            return f'x{reg_num}/{abi}'
+        return f'x{reg_num}'
     
     def _decode_mstatus(self, value):
         """Decode mstatus register bits"""
