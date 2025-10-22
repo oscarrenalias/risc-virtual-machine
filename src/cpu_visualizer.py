@@ -47,13 +47,14 @@ class CPUVisualizer:
         self.previous_instruction_count = cpu.instruction_count
         self.previous_csrs = cpu.csr.copy()
     
-    def render_to_string(self, cpu, show_next_instruction=None, compact=False):
+    def render_to_string(self, cpu, show_current_instruction=None, show_next_instruction=None, compact=False):
         """
         Render CPU state to a string (for panel content)
         
         Args:
             cpu: CPU instance to render
-            show_next_instruction: Optional instruction text to show
+            show_current_instruction: Optional current instruction text to show
+            show_next_instruction: Optional next instruction text to show
             compact: If True, use more compact rendering
             
         Returns:
@@ -74,10 +75,16 @@ class CPUVisualizer:
         else:
             lines.append(f"[bold green]Status:[/bold green] [green]RUNNING[/green]")
         
+        # Show current instruction if provided
+        if show_current_instruction:
+            lines.append("")
+            lines.append(f"[bold cyan]Current:[/bold cyan] [white]{show_current_instruction}[/white]")
+        
         # Show next instruction if provided
         if show_next_instruction:
-            lines.append("")
-            lines.append(f"[bold magenta]Next:[/bold magenta] [white]{show_next_instruction}[/white]")
+            if not show_current_instruction:
+                lines.append("")
+            lines.append(f"[bold magenta]Next:[/bold magenta] [dim]{show_next_instruction}[/dim]")
         
         lines.append("")
         lines.append("[bold cyan]═══ Registers ═══[/bold cyan]")
@@ -116,20 +123,21 @@ class CPUVisualizer:
         
         return "\n".join(lines)
     
-    def render_panel(self, cpu, show_next_instruction=None, compact=False, title="CPU State"):
+    def render_panel(self, cpu, show_current_instruction=None, show_next_instruction=None, compact=False, title="CPU State"):
         """
         Render CPU state as a Rich panel
         
         Args:
             cpu: CPU instance to render
-            show_next_instruction: Optional instruction text to show
+            show_current_instruction: Optional current instruction text to show
+            show_next_instruction: Optional next instruction text to show
             compact: If True, use more compact rendering
             title: Panel title
             
         Returns:
             Rich Panel object
         """
-        content = self.render_to_string(cpu, show_next_instruction, compact)
+        content = self.render_to_string(cpu, show_current_instruction, show_next_instruction, compact)
         return Panel(
             content,
             title=f"[bold]{title}[/bold]",

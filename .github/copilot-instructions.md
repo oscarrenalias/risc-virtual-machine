@@ -47,7 +47,6 @@ This is a 32-bit RISC assembly interpreter written in Python that simulates a RI
 - Rich-based terminal UI for CPU state
 - Live display mode with `-l` flag
 - Step-by-step execution with `-s` flag
-- CPU state panel with `--cpu-view` flag
 
 ## Testing
 - Use pytest for all tests
@@ -81,10 +80,7 @@ uv run python main.py examples/counter.asm --no-clock
 uv run python main.py examples/test.asm -d
 
 # Step-by-step with CPU visualization
-uv run python main.py examples/test.asm -s --cpu-view
-
-# Live display with CPU state
-uv run python main.py examples/clock.asm -l --cpu-view
+uv run python main.py examples/test.asm -s -l
 
 # Run tests
 uv run pytest

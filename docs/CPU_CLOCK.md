@@ -153,7 +153,7 @@ time ./run.sh examples/prime_check.asm --no-clock --no-display
 
 ```bash
 # Run at 10 Hz so you can follow along
-./run.sh examples/test.asm --clock-hz 10 -l --cpu-view
+./run.sh examples/test.asm --clock-hz 10 -l
 ```
 
 ## Notes

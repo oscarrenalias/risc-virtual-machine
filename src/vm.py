@@ -712,6 +712,31 @@ class VirtualMachine:
             return self._format_instruction(instruction)
         return "???"
     
+    def get_next_instruction_text(self):
+        """
+        Get human-readable text of next instruction (at PC+4)
+        
+        For sequential flow, this shows the instruction that will execute next.
+        For branches/jumps, this shows the sequential case (not taken/fallthrough).
+        
+        Returns:
+            String representation of next instruction or appropriate message
+        """
+        if self.cpu.halted:
+            return "(halted)"
+        
+        if self.cpu.waiting_for_interrupt:
+            return "(waiting for interrupt)"
+        
+        # Get next sequential instruction at PC+4
+        next_pc = self.cpu.pc + 4
+        next_instruction = self.get_instruction_at_address(next_pc)
+        
+        if next_instruction:
+            return self._format_instruction(next_instruction)
+        
+        return "(end of program)"
+    
     def get_instruction_at_address(self, address):
         """
         Get instruction at a specific address
