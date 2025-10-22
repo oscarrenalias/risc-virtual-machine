@@ -1,4 +1,4 @@
-# String printing demonstration - improved version
+# String printing demonstration - improved version (using ABI register names)
 # Demonstrates string output with proper cursor tracking
 
 .data
@@ -9,50 +9,47 @@ msg3: .string "Strings work!"
 .text
 main:
     # Initialize display cursor at start of display (0xF0000)
-    LUI x20, 0xF0               # x20 will track current display position
+    LUI s4, 0xF0                # s4 will track current display position
     
     # Print first string
-    LUI x10, 0x10               # Load address of msg1 (0x10000)
-    ADDI x10, x10, 0
-    JAL x1, print_string
+    LA a0, msg1                 # Load address of msg1
+    JAL ra, print_string
     
     # Print second string
-    LUI x10, 0x10               # Load address of msg2 (0x1000E = 0x10000 + 14)
-    ADDI x10, x10, 14
-    JAL x1, print_string
+    LA a0, msg2                 # Load address of msg2
+    JAL ra, print_string
     
     # Print third string
-    LUI x10, 0x10               # Load address of msg3 (0x10027 = 0x10000 + 39)
-    ADDI x10, x10, 39
-    JAL x1, print_string
+    LA a0, msg3                 # Load address of msg3
+    JAL ra, print_string
     
     HALT
 
 # Function: print_string
-# Input: x10 = address of null-terminated string
-#        x20 = current display cursor position (updated by this function)
-# Uses: x11 (temp char), x12 (display ptr copy)
+# Input: a0 = address of null-terminated string
+#        s4 = current display cursor position (updated by this function)
+# Uses: a1 (temp char), a2 (display ptr copy)
 print_string:
     # Save return address
-    ADDI x2, x2, -4
-    SW x1, 0(x2)
+    ADDI sp, sp, -4
+    SW ra, 0(sp)
     
     # Copy display cursor to working register
-    ADD x12, x20, x0            # x12 = current cursor position
+    ADD a2, s4, zero            # a2 = current cursor position
     
 print_loop:
-    LBU x11, 0(x10)             # Load byte from string
-    BEQ x11, x0, print_done     # If null, done
-    SB x11, 0(x12)              # Write to display
-    ADDI x10, x10, 1            # Next char in string
-    ADDI x12, x12, 1            # Next display position
-    JAL x0, print_loop
+    LBU a1, 0(a0)               # Load byte from string
+    BEQ a1, zero, print_done    # If null, done
+    SB a1, 0(a2)                # Write to display
+    ADDI a0, a0, 1              # Next char in string
+    ADDI a2, a2, 1              # Next display position
+    JAL zero, print_loop
     
 print_done:
     # Update global cursor position
-    ADD x20, x12, x0            # x20 = final cursor position
+    ADD s4, a2, zero            # s4 = final cursor position
     
     # Restore and return
-    LW x1, 0(x2)
-    ADDI x2, x2, 4
-    JALR x0, x1, 0
+    LW ra, 0(sp)
+    ADDI sp, sp, 4
+    JALR zero, ra, 0

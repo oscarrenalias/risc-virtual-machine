@@ -145,7 +145,10 @@ INSTRUCTION_SET = {
     'HALT': InstructionType.HALT,
     'MRET': InstructionType.HALT,  # Return from interrupt (like HALT but different semantics)
     'WFI': InstructionType.HALT,   # Wait for interrupt
+    
+    # Pseudo-instructions (expanded during assembly)
     'NOP': InstructionType.I_TYPE,  # No operation (implemented as ADDI x0, x0, 0)
+    'LA': InstructionType.I_TYPE,   # Load address (pseudo-instruction, expands to LUI + ADDI)
 }
 
 def parse_register(reg_str):

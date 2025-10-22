@@ -183,8 +183,27 @@ class Assembler:
                 # Parse instruction
                 if current_section == '.text':
                     instruction = self._parse_instruction(line)
-                    self.instructions.append(instruction)
-                    self.current_address += 4  # Each instruction is 4 bytes
+                    
+                    # Handle LA pseudo-instruction expansion
+                    if instruction.opcode == 'LA':
+                        # LA rd, label expands to:
+                        # LUI rd, %hi(label)
+                        # ADDI rd, rd, %lo(label)
+                        rd = instruction.rd
+                        label = instruction.label
+                        
+                        # Create LUI instruction (upper 20 bits)
+                        lui_inst = Instruction('LUI', InstructionType.U_TYPE, rd=rd, label=label)
+                        self.instructions.append(lui_inst)
+                        self.current_address += 4
+                        
+                        # Create ADDI instruction (lower 12 bits)
+                        addi_inst = Instruction('ADDI', InstructionType.I_TYPE, rd=rd, rs1=rd, label=label)
+                        self.instructions.append(addi_inst)
+                        self.current_address += 4
+                    else:
+                        self.instructions.append(instruction)
+                        self.current_address += 4  # Each instruction is 4 bytes
                 elif current_section == '.data':
                     self._parse_data_directive(line)
                 
@@ -193,7 +212,10 @@ class Assembler:
     
     def _second_pass(self):
         """Second pass: resolve label references to addresses"""
-        for instruction in self.instructions:
+        i = 0
+        while i < len(self.instructions):
+            instruction = self.instructions[i]
+            
             if instruction.label:
                 if instruction.label not in self.labels:
                     raise AssemblerError(f"Undefined label: {instruction.label}")
@@ -203,15 +225,42 @@ class Assembler:
                 # Calculate relative offset for branches
                 if instruction.type == InstructionType.B_TYPE:
                     # Branch offset is relative to current instruction
-                    current_addr = self.instructions.index(instruction) * 4
+                    current_addr = i * 4
                     instruction.imm = target_addr - current_addr
                 elif instruction.type == InstructionType.J_TYPE:
                     # Jump offset is also relative
-                    current_addr = self.instructions.index(instruction) * 4
+                    current_addr = i * 4
                     instruction.imm = target_addr - current_addr
+                elif instruction.type == InstructionType.U_TYPE:
+                    # LUI: use upper 20 bits of address
+                    # Check if next instruction is ADDI for LA expansion
+                    if (i + 1 < len(self.instructions) and 
+                        self.instructions[i + 1].opcode == 'ADDI' and
+                        self.instructions[i + 1].label == instruction.label and
+                        self.instructions[i + 1].rd == instruction.rd and
+                        self.instructions[i + 1].rs1 == instruction.rd):
+                        # This is part of LA expansion
+                        # LUI gets upper 20 bits
+                        instruction.imm = (target_addr >> 12) & 0xFFFFF
+                        # ADDI gets lower 12 bits (will be handled next iteration)
+                    else:
+                        # Regular LUI with label (not part of LA)
+                        instruction.imm = (target_addr >> 12) & 0xFFFFF
                 elif instruction.type == InstructionType.I_TYPE:
-                    # For I-type, use absolute address as immediate
-                    instruction.imm = target_addr
+                    # Check if this is the ADDI part of LA expansion
+                    if (instruction.opcode == 'ADDI' and 
+                        i > 0 and
+                        self.instructions[i - 1].opcode == 'LUI' and
+                        self.instructions[i - 1].label == instruction.label and
+                        instruction.rd == instruction.rs1):
+                        # This is the ADDI part of LA expansion
+                        # Use lower 12 bits of address
+                        instruction.imm = target_addr & 0xFFF
+                    else:
+                        # Regular I-type with label, use absolute address
+                        instruction.imm = target_addr
+            
+            i += 1
     
     def _parse_instruction(self, line):
         """
@@ -246,7 +295,17 @@ class Assembler:
             return Instruction(opcode, inst_type, rd=rd, rs1=rs1, rs2=rs2)
         
         elif inst_type == InstructionType.I_TYPE:
-            if opcode in ['LW', 'LB', 'LH', 'LBU', 'LHU']:
+            if opcode == 'LA':
+                # LA is a pseudo-instruction: LA rd, label
+                # It expands to: LUI rd, %hi(label); ADDI rd, rd, %lo(label)
+                # For simplicity, we'll use a label reference that gets resolved in second pass
+                if len(parts) < 3:
+                    raise AssemblerError(f"LA instruction requires 2 operands: {line}")
+                rd = parse_register(parts[1])
+                label = parts[2]
+                # Return a special marker instruction that will be expanded in _first_pass
+                return Instruction(opcode, inst_type, rd=rd, label=label)
+            elif opcode in ['LW', 'LB', 'LH', 'LBU', 'LHU']:
                 # Format: LW x1, 100(x2)
                 if len(parts) < 3:
                     raise AssemblerError(f"Load instruction requires 2 operands: {line}")

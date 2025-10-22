@@ -82,4 +82,11 @@
 ### System
 - `HALT` - Halt execution
 - `MRET` - Return from interrupt/exception
-- `NOP` - No operation
+- `WFI` - Wait for interrupt
+- `NOP` - No operation (pseudo-instruction: `ADDI x0, x0, 0`)
+
+### Pseudo-Instructions
+- `NOP` - No operation (expands to `ADDI x0, x0, 0`)
+- `LA rd, label` - Load address (expands to `LUI rd, %hi(label); ADDI rd, rd, %lo(label)`)
+
+See [LA Pseudo-Instruction Documentation](LA_PSEUDO_INSTRUCTION.md) for detailed information about loading addresses.
