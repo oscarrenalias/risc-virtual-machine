@@ -687,6 +687,46 @@ class VirtualMachine:
         print(self.cpu.dump_registers())
         print("="*70)
     
+    def dump_program(self):
+        """
+        Print the entire loaded program with addresses and instructions
+        
+        Shows all instructions loaded in memory with their addresses and
+        formatted representation. Highlights the current PC location.
+        """
+        from rich.console import Console
+        from rich.table import Table
+        
+        console = Console()
+        
+        # Create table
+        table = Table(title=f"Program Listing ({len(self.instructions)} instructions)", 
+                     show_header=True, header_style="bold cyan")
+        table.add_column("Address", style="yellow", width=12)
+        table.add_column("Instruction", style="white", width=50)
+        table.add_column("", style="dim", width=5)  # For current PC marker
+        
+        # Add each instruction
+        for i, inst in enumerate(self.instructions):
+            addr = i * 4  # Each instruction is 4 bytes
+            formatted = self._format_instruction(inst)
+            
+            # Mark current PC
+            marker = "<<" if addr == self.cpu.pc else ""
+            
+            # Highlight current instruction
+            if addr == self.cpu.pc:
+                table.add_row(f"0x{addr:08X}", formatted, marker, style="bold green")
+            else:
+                table.add_row(f"0x{addr:08X}", formatted, marker)
+        
+        console.print()
+        console.print(table)
+        console.print()
+        console.print(f"[dim]Current PC: 0x{self.cpu.pc:08X}[/dim]")
+        console.print(f"[dim]Instruction count: {len(self.instructions)}[/dim]")
+        console.print(f"[dim]Memory used: {len(self.instructions) * 4} bytes[/dim]")
+    
     def get_current_instruction(self):
         """
         Get the instruction at the current PC

@@ -122,7 +122,7 @@ class VMVisualizer:
             self.console.print()
             commands = (
                 "[bold cyan]Commands:[/bold cyan] "
-                "[s]tep  [c]ontinue  [r]egisters  [d]isplay  "
+                "[?]help  [s]tep  [c]ontinue  [r]egisters  [d]isplay  [p]rogram  "
                 "[m]emory <addr>  [b]reak <addr>  [q]uit"
             )
             self.console.print(commands)

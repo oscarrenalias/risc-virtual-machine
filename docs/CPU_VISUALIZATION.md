@@ -39,15 +39,6 @@ uv run python main.py -s -l examples/hello.asm
 ./run.sh -s -l examples/fibonacci.asm
 ```
 
-**Commands in step mode:**
-- `s` or `Enter` - Step (execute next instruction)
-- `c` - Continue (run continuously until halt)
-- `r` - Show detailed register dump
-- `d` - Show display only
-- `m <addr>` - Show memory at address (hex or decimal)
-- `b <addr>` - Set breakpoint at address (future feature)
-- `q` - Quit
-
 ### Live Continuous Execution
 
 ```bash
@@ -70,47 +61,6 @@ You can adjust the minimum width requirement:
 ```bash
 uv run python main.py -s -l --min-width 120 examples/hello.asm
 ```
-
-## Examples
-
-### Example 1: Learning Basic Instructions
-
-```bash
-# Step through hello.asm to see how characters are written to display
-uv run python main.py -s -l examples/hello.asm
-```
-
-Watch how:
-- LUI loads the display base address into x10
-- ADDI sets character codes in x11
-- SW writes characters to memory-mapped display
-- Registers change with each instruction (highlighted in yellow)
-
-### Example 2: Understanding Interrupts
-
-```bash
-# Step through the timer example to see interrupt handling
-uv run python main.py -s -l examples/timer_test.asm
-```
-
-Observe:
-- CSR registers (mstatus, mie, mtvec) being configured
-- WFI state when CPU waits for interrupts
-- Interrupt pending bits in mip
-- PC jumping to interrupt handler
-
-### Example 3: Live Clock Demo
-
-```bash
-# Watch the clock run with real-time CPU state
-uv run python main.py -l --clock-hz 5 examples/clock.asm
-```
-
-See:
-- Real-time timer interrupts
-- Register values changing (x20=hours, x21=minutes, x22=seconds)
-- Display updating with formatted time
-- Automatic update interval adjusted for clock speed
 
 ## Technical Details
 
@@ -148,22 +98,48 @@ mtvec:   0x00000100
 - **WFI (waiting)**: CPU is in wait-for-interrupt state
 - **HALTED**: Program has executed HALT instruction
 
-## Implementation Details
+# Help Command in Step Mode
 
-The visualization is built on the `rich` library for terminal rendering:
-- **CPUVisualizer**: Manages CPU state display and change tracking
-- **VMVisualizer**: Coordinates display and CPU panels
-- **Change tracking**: Compares state between renders to highlight changes
+## Overview
 
-The architecture supports both step-by-step debugging and live execution modes with the same underlying visualization code.
+The step mode in the RISC Virtual Machine includes a built-in help command (`?`) that displays a comprehensive list of all available commands with descriptions and usage examples.
 
-## Tips
+## Feature Description
 
-1. **Wider is Better**: Use a wide terminal (150+ columns) for the best experience
-2. **Step Through Slowly**: Take time to observe register changes in step mode
-3. **Watch CSRs**: Pay special attention to CSR changes when learning interrupts
-4. **Use Continue**: In step mode, use 'c' to run continuously after stepping through setup code
-5. **Combine with Debug**: Use `-d` flag for even more detailed logging
+When running the VM in step-by-step execution mode (with `-s` or `--step` flag), users can type `?` at the command prompt to display a formatted help table showing all available commands.
+
+### Accessing Help
+
+At the command prompt, type `?` and press Enter:
+```
+[0x00000000]> ?
+```
+
+This will display a formatted table with all available commands.
+
+## Available Commands
+
+The help system displays the following commands:
+
+| Command | Description |
+|---------|-------------|
+| `?` | Show this help message |
+| `s` or `Enter` | Step: execute one instruction |
+| `c` | Continue: run continuously until halt or breakpoint |
+| `r` | Show registers (detailed dump) |
+| `d` | Show display output |
+| `p` | Show program listing (all loaded instructions) |
+| `m <addr>` | Show memory at address (hex or decimal) |
+| `b <addr>` | Set breakpoint at address (placeholder) |
+| `q` | Quit execution |
+
+## Examples
+
+The help command also provides examples for complex commands:
+
+- `m 0x1000` - Show memory at address 0x1000 (hexadecimal)
+- `m 4096` - Show memory at address 4096 (decimal)
+- `b 0x100` - Set breakpoint at 0x100 (placeholder feature)
 
 ## Troubleshooting
 
@@ -181,18 +157,3 @@ The architecture supports both step-by-step debugging and live execution modes w
 - Check terminal width
 - Ensure you're using the `-l` flag
 - Check for error messages on startup
-
-## Future Enhancements
-
-Planned features:
-- Memory/stack visualization panel (3-column layout)
-- Breakpoint support (partially implemented)
-- Call stack visualization
-- Instruction history (last N instructions)
-- Reverse step (step backwards)
-- Interactive register editing
-- Full TUI mode with keyboard shortcuts
-
-## Feedback
-
-This is a new feature designed to enhance the learning experience. Feedback and suggestions are welcome!

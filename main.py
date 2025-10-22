@@ -14,6 +14,37 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 from src import VirtualMachine, VMError, VMVisualizer
 
 
+def show_help():
+    """Display help for step mode commands"""
+    from rich.console import Console
+    from rich.table import Table
+    
+    console = Console()
+    
+    # Create a table for commands
+    table = Table(title="Step Mode Commands", show_header=True, header_style="bold cyan")
+    table.add_column("Command", style="yellow", width=15)
+    table.add_column("Description", style="white")
+    
+    table.add_row("?", "Show this help message")
+    table.add_row("s / Enter", "Step: execute one instruction")
+    table.add_row("c", "Continue: run continuously until halt or breakpoint")
+    table.add_row("r", "Show registers (detailed dump)")
+    table.add_row("d", "Show display output")
+    table.add_row("p", "Show program listing (all instructions)")
+    table.add_row("m <addr>", "Show memory at address (hex or decimal)")
+    table.add_row("b <addr>", "Set breakpoint at address (placeholder)")
+    table.add_row("q", "Quit execution")
+    
+    console.print()
+    console.print(table)
+    console.print()
+    console.print("[dim]Examples:[/dim]")
+    console.print("  [yellow]m 0x1000[/yellow]     - Show memory at address 0x1000")
+    console.print("  [yellow]m 4096[/yellow]       - Show memory at address 4096 (decimal)")
+    console.print("  [yellow]b 0x100[/yellow]      - Set breakpoint at 0x100")
+
+
 def run_visual_step_mode(vm, visualizer, args):
     """
     Run step mode with visual panels showing CPU state
@@ -42,6 +73,10 @@ def run_visual_step_mode(vm, visualizer, args):
         
         if cmd == 'q':
             break
+        elif cmd == '?':
+            # Show help
+            show_help()
+            input("\nPress Enter to continue...")
         elif cmd == 's' or cmd == '':
             # Step: execute one instruction
             vm.step()
@@ -56,6 +91,10 @@ def run_visual_step_mode(vm, visualizer, args):
         elif cmd == 'd':
             # Show display only
             vm.display.render()
+            input("\nPress Enter to continue...")
+        elif cmd == 'p':
+            # Show program listing
+            vm.dump_program()
             input("\nPress Enter to continue...")
         elif cmd.startswith('m '):
             # Show memory at address
@@ -74,7 +113,7 @@ def run_visual_step_mode(vm, visualizer, args):
             except ValueError:
                 visualizer.print_error("Invalid address format")
         else:
-            visualizer.print_error("Unknown command")
+            visualizer.print_error("Unknown command. Type '?' for help")
     
     visualizer.print_info("Execution completed or halted")
 
@@ -88,9 +127,11 @@ def run_text_step_mode(vm, args):
         args: Command-line arguments
     """
     print("\nStep-by-step execution. Commands:")
+    print("  ? - Show help")
     print("  [Enter] - Execute next instruction")
     print("  r - Show registers")
     print("  d - Show display")
+    print("  p - Show program listing")
     print("  m <addr> - Show memory at address")
     print("  q - Quit")
     
@@ -99,10 +140,15 @@ def run_text_step_mode(vm, args):
         
         if cmd == 'q':
             break
+        elif cmd == '?':
+            show_help()
+            input("\nPress Enter to continue...")
         elif cmd == 'r':
             vm.dump_state()
         elif cmd == 'd':
             vm.display.render()
+        elif cmd == 'p':
+            vm.dump_program()
         elif cmd.startswith('m '):
             try:
                 addr = int(cmd[2:], 0)
@@ -114,7 +160,7 @@ def run_text_step_mode(vm, args):
             if not args.no_display:
                 vm.display.render_simple()
         else:
-            print("Unknown command")
+            print("Unknown command. Type '?' for help")
 
 
 def main():
