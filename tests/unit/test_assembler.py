@@ -289,3 +289,121 @@ class TestMultipleInstructions:
         assert instructions[1].opcode == "ADDI"
         assert instructions[2].opcode == "ADD"
         assert instructions[3].opcode == "HALT"
+
+
+class TestPseudoInstructions:
+    """Test pseudo-instruction expansion"""
+    
+    def test_call_expands_to_jal_ra(self, assembler):
+        """Test CALL label expands to JAL ra, label"""
+        program = """
+main:
+    CALL helper
+    HALT
+helper:
+    ADDI x1, x0, 42
+"""
+        instructions = assembler.assemble(program)
+        
+        # CALL should expand to JAL
+        assert instructions[0].opcode == "JAL"
+        assert instructions[0].rd == 1  # ra register
+        # Label should be resolved to helper function
+        assert instructions[0].imm == 8  # Offset to helper (2 instructions * 4 bytes)
+    
+    def test_ret_expands_to_jalr(self, assembler):
+        """Test RET expands to JALR zero, ra, 0"""
+        program = """
+    ADDI x1, x0, 42
+    RET
+"""
+        instructions = assembler.assemble(program)
+        
+        # RET should expand to JALR
+        assert instructions[1].opcode == "JALR"
+        assert instructions[1].rd == 0   # zero register (discard return address)
+        assert instructions[1].rs1 == 1  # ra register
+        assert instructions[1].imm == 0  # No offset
+    
+    def test_call_ret_function_pattern(self, assembler):
+        """Test typical CALL/RET function pattern"""
+        program = """
+main:
+    ADDI a0, zero, 5
+    CALL square
+    HALT
+
+square:
+    MUL a0, a0, a0
+    RET
+"""
+        instructions = assembler.assemble(program)
+        
+        # Should be 4 instructions: ADDI, JAL (from CALL), HALT, MUL, JALR (from RET)
+        assert len(instructions) == 5
+        
+        # Check CALL expanded to JAL
+        assert instructions[1].opcode == "JAL"
+        assert instructions[1].rd == 1  # ra
+        
+        # Check RET expanded to JALR
+        assert instructions[4].opcode == "JALR"
+        assert instructions[4].rd == 0   # zero
+        assert instructions[4].rs1 == 1  # ra
+        assert instructions[4].imm == 0
+    
+    def test_nested_calls_with_call_ret(self, assembler):
+        """Test nested function calls using CALL/RET"""
+        program = """
+main:
+    CALL func1
+    HALT
+
+func1:
+    CALL func2
+    RET
+
+func2:
+    ADDI x1, x0, 1
+    RET
+"""
+        instructions = assembler.assemble(program)
+        
+        # main: CALL func1, HALT
+        # func1: CALL func2, RET
+        # func2: ADDI, RET
+        # Total: 6 instructions
+        assert len(instructions) == 6
+        
+        # First CALL
+        assert instructions[0].opcode == "JAL"
+        
+        # Second CALL
+        assert instructions[2].opcode == "JAL"
+        
+        # First RET
+        assert instructions[3].opcode == "JALR"
+        
+        # Second RET
+        assert instructions[5].opcode == "JALR"
+    
+    def test_call_with_abi_names(self, assembler):
+        """Test CALL works with program using ABI register names"""
+        program = """
+main:
+    ADDI a0, zero, 42
+    CALL print_value
+    HALT
+
+print_value:
+    SW a0, 0(sp)
+    RET
+"""
+        instructions = assembler.assemble(program)
+        
+        # Verify CALL expanded correctly
+        assert instructions[1].opcode == "JAL"
+        assert instructions[1].rd == 1  # ra
+        
+        # Verify RET expanded correctly
+        assert instructions[4].opcode == "JALR"

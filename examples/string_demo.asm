@@ -13,15 +13,15 @@ main:
     
     # Print first string
     LA a0, msg1                 # Load address of msg1
-    JAL ra, print_string
+    CALL print_string
     
     # Print second string
     LA a0, msg2                 # Load address of msg2
-    JAL ra, print_string
+    CALL print_string
     
     # Print third string
     LA a0, msg3                 # Load address of msg3
-    JAL ra, print_string
+    CALL print_string
     
     HALT
 
@@ -52,4 +52,4 @@ print_done:
     # Restore and return
     LW ra, 0(sp)
     ADDI sp, sp, 4
-    JALR zero, ra, 0
+    RET

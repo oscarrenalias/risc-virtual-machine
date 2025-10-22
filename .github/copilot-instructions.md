@@ -29,9 +29,14 @@ This is a 32-bit RISC assembly interpreter written in Python that simulates a RI
 - Arithmetic: ADD, SUB, MUL, DIV, MOD
 - Logical: AND, OR, XOR, NOT, SHL, SHR
 - Memory: LW (load word), SW (store word)
-- Control: BEQ, BNE, BLT, BGE, J, JAL
+- Control: BEQ, BNE, BLT, BGE, JAL, JALR
 - System: HALT, NOP, WFI (wait for interrupt)
 - Interrupts: MRET (return from interrupt), MTIMECMP (timer compare)
+- Pseudo-instructions: 
+  - NOP (expands to ADDI x0, x0, 0)
+  - LA rd, label (load address - expands to LUI + ADDI)
+  - CALL label (call function - expands to JAL ra, label)
+  - RET (return from function - expands to JALR zero, ra, 0)
 
 ### Labels
 - Assembly code uses labels instead of absolute addresses

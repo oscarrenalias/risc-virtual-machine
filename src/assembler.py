@@ -400,6 +400,21 @@ class Assembler:
                 rs1 = parse_register(parts[2])
                 imm = parse_immediate(parts[3])
                 return Instruction(opcode, inst_type, rd=rd, rs1=rs1, imm=imm)
+            
+            elif opcode == 'CALL':
+                # CALL is a pseudo-instruction: CALL label
+                # Expands to: JAL ra, label
+                if len(parts) < 2:
+                    raise AssemblerError(f"CALL requires 1 operand: {line}")
+                label = parts[1]
+                # Return JAL with ra (x1) as link register
+                return Instruction('JAL', inst_type, rd=1, label=label)
+            
+            elif opcode == 'RET':
+                # RET is a pseudo-instruction: RET
+                # Expands to: JALR zero, ra, 0
+                # No operands required
+                return Instruction('JALR', inst_type, rd=0, rs1=1, imm=0)
         
         elif inst_type == InstructionType.U_TYPE:
             # Format: LUI x1, 0x12345

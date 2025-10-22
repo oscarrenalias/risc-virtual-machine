@@ -88,5 +88,8 @@
 ### Pseudo-Instructions
 - `NOP` - No operation (expands to `ADDI x0, x0, 0`)
 - `LA rd, label` - Load address (expands to `LUI rd, %hi(label); ADDI rd, rd, %lo(label)`)
+- `CALL label` - Call function (expands to `JAL ra, label`)
+- `RET` - Return from function (expands to `JALR zero, ra, 0`)
 
 See [LA Pseudo-Instruction Documentation](LA_PSEUDO_INSTRUCTION.md) for detailed information about loading addresses.
+See [CALL/RET Pseudo-Instructions Documentation](CALL_RET_PSEUDO_INSTRUCTIONS.md) for detailed information about function calls.

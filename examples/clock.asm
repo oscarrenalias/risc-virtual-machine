@@ -38,7 +38,7 @@ main:
     CSRRW x0, 0x300, x3     # mstatus.MIE = 1
     
     # Display initial clock
-    JAL x1, display_clock
+    CALL display_clock
 
 main_loop:
     # Main loop - wait for interrupts using WFI
@@ -160,7 +160,7 @@ div_s_tens:
     # Restore return address and return
     LW x1, 0(sp)
     ADDI sp, sp, 4
-    JALR x0, x1, 0
+    RET
 
 # Real-time timer interrupt handler
 timer_handler:
@@ -191,7 +191,7 @@ timer_handler:
 
 timer_update:
     # Update display - using label instead of manual calculation!
-    JAL x1, display_clock
+    CALL display_clock
     
     # Return from interrupt
     MRET

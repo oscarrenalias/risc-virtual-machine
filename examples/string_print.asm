@@ -12,23 +12,23 @@ corner_msg: .string "Corner"
 main:
     # Print first string at default position
     LA a0, hello_msg            # Load address of hello_msg (a0 = first argument)
-    JAL ra, print_string        # Call print function (ra = return address)
+    CALL print_string           # Call print function
     
     # Print second string at default position
     LA a0, newline_msg          # Load address of newline_msg
-    JAL ra, print_string        # Call print function
+    CALL print_string           # Call print function
     
     # Print string at specific coordinates (10, 5)
     LA a0, positioned_msg       # String address
     ADDI a1, zero, 10           # x = 10
     ADDI a2, zero, 5            # y = 5
-    JAL ra, print_string_xy     # Call positioned print function
+    CALL print_string_xy        # Call positioned print function
     
     # Print string at bottom-right corner (74, 24)
     LA a0, corner_msg           # String address
     ADDI a1, zero, 74           # x = 74 (80 - 6 chars)
     ADDI a2, zero, 24           # y = 24 (last row)
-    JAL ra, print_string_xy     # Call positioned print function
+    CALL print_string_xy        # Call positioned print function
     
     HALT                        # Stop execution
 
@@ -55,7 +55,7 @@ print_done:
     # Restore return address and return
     LW ra, 0(sp)                # Restore return address
     ADDI sp, sp, 4              # Deallocate stack space
-    JALR zero, ra, 0            # Return to caller
+    RET                         # Return to caller
 
 # Function: print_string_xy
 # Input: a0 = address of null-terminated string
@@ -95,4 +95,4 @@ print_xy_done:
     # Restore return address and return
     LW ra, 4(sp)                # Restore return address
     ADDI sp, sp, 8              # Deallocate stack space
-    JALR zero, ra, 0            # Return to caller
+    RET                         # Return to caller

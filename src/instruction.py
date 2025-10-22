@@ -149,6 +149,8 @@ INSTRUCTION_SET = {
     # Pseudo-instructions (expanded during assembly)
     'NOP': InstructionType.I_TYPE,  # No operation (implemented as ADDI x0, x0, 0)
     'LA': InstructionType.I_TYPE,   # Load address (pseudo-instruction, expands to LUI + ADDI)
+    'CALL': InstructionType.J_TYPE, # Call function (expands to JAL ra, label)
+    'RET': InstructionType.J_TYPE,  # Return from function (expands to JALR zero, ra, 0)
 }
 
 def parse_register(reg_str):

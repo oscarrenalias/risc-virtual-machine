@@ -14,7 +14,7 @@ main:
     ADDI x12, x0, func_c          # Function table[2] = func_c
     
     # Call a function indirectly
-    JAL x1, func_a
+    CALL func_a
     
     # Loop forever
     JAL x0, main
@@ -22,17 +22,17 @@ main:
 # Function A
 func_a:
     ADDI x20, x20, 1
-    JALR x0, x1, 0                # Return
+    RET                           # Return
 
 # Function B
 func_b:
     ADDI x21, x21, 1
-    JALR x0, x1, 0                # Return
+    RET                           # Return
 
 # Function C
 func_c:
     ADDI x22, x22, 1
-    JALR x0, x1, 0                # Return
+    RET                           # Return
 
 # Interrupt handler
 my_handler:
