@@ -9,15 +9,11 @@ newline_msg: .string "\nWelcome to RISC VM!"
 .text
 main:
     # Print first string
-    # Load address of hello_msg (0x10000) using LUI+ADDI
-    LUI a0, 0x10                # Load upper 20 bits: 0x10000 (a0 = first argument)
-    ADDI a0, a0, 0              # Add lower 12 bits: 0
+    LA a0, hello_msg            # Load address of hello_msg (a0 = first argument)
     JAL ra, print_string        # Call print function (ra = return address)
     
     # Print second string  
-    # Address of newline_msg is 0x1000E (hello_msg + 14 bytes)
-    LUI a0, 0x10                # Load upper 20 bits: 0x10000
-    ADDI a0, a0, 14             # Add offset for second string
+    LA a0, newline_msg          # Load address of newline_msg
     JAL ra, print_string        # Call print function
     
     HALT                        # Stop execution
