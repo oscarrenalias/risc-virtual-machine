@@ -90,6 +90,36 @@
 - `LA rd, label` - Load address (expands to `LUI rd, %hi(label); ADDI rd, rd, %lo(label)`)
 - `CALL label` - Call function (expands to `JAL ra, label`)
 - `RET` - Return from function (expands to `JALR zero, ra, 0`)
+- `J label` - Jump to label (expands to `JAL zero, label`)
 
 See [LA Pseudo-Instruction Documentation](LA_PSEUDO_INSTRUCTION.md) for detailed information about loading addresses.
 See [CALL/RET Pseudo-Instructions Documentation](CALL_RET_PSEUDO_INSTRUCTIONS.md) for detailed information about function calls.
+See [J Pseudo-Instruction Documentation](J_PSEUDO_INSTRUCTION.md) for detailed information about unconditional jumps.
+
+#### J Pseudo-Instruction
+The `J` pseudo-instruction provides a simple unconditional jump without saving a return address. It expands to `JAL zero, label`, which jumps to the target label while discarding the return address by writing it to register `x0` (which is hardwired to zero).
+
+**Usage:**
+```assembly
+J label        # Jump to label
+```
+
+**Expansion:**
+```assembly
+JAL zero, label  # Jump and link, but discard return address
+```
+
+**Differences from CALL:**
+- `J` does not save a return address (writes to `zero` register)
+- `CALL` saves the return address in `ra` (return address register)
+- Use `J` for unconditional jumps when you don't need to return
+- Use `CALL` for function calls that need to return with `RET`
+
+**Example:**
+```assembly
+    ADDI x1, x0, 1
+    J skip           # Jump over the next instruction
+    ADDI x2, x0, 2   # This is skipped
+skip:
+    ADDI x3, x0, 3   # Execution continues here
+```

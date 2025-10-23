@@ -415,6 +415,15 @@ class Assembler:
                 # Expands to: JALR zero, ra, 0
                 # No operands required
                 return Instruction('JALR', inst_type, rd=0, rs1=1, imm=0)
+            
+            elif opcode == 'J':
+                # J is a pseudo-instruction: J label
+                # Expands to: JAL zero, label
+                if len(parts) < 2:
+                    raise AssemblerError(f"J requires 1 operand: {line}")
+                label = parts[1]
+                # Return JAL with zero (x0) as destination register (no link)
+                return Instruction('JAL', inst_type, rd=0, label=label)
         
         elif inst_type == InstructionType.U_TYPE:
             # Format: LUI x1, 0x12345
