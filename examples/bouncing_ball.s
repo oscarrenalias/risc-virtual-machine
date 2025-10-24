@@ -37,7 +37,7 @@ game_loop:
     # Erase ball at current position
     add t0, zero, s0         # t0 = X position
     add t1, zero, s1         # t1 = Y position
-    addi a0, zero, 32        # a0 = space character (ASCII 32)
+    addi a0, zero, ' '       # a0 = space character
     call draw_char
     
     # Update X position
@@ -87,7 +87,7 @@ draw_ball:
     # Draw ball at new position
     add t0, zero, s0         # t0 = X position
     add t1, zero, s1         # t1 = Y position
-    addi a0, zero, 79        # a0 = 'O' character (ASCII 79)
+    addi a0, zero, 'O'       # a0 = 'O' character
     call draw_char
     
     # Add delay to make movement visible
@@ -127,7 +127,7 @@ draw_char:
 clear_screen:
     addi t0, zero, 0         # t0 = counter (0 to 2000)
     addi t1, zero, 2000      # t1 = total characters (80 * 25)
-    addi a0, zero, 32        # a0 = space character
+    addi a0, zero, ' '       # a0 = space character
 
 clear_loop:
     bge t0, t1, clear_done   # if counter >= 2000, done

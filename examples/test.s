@@ -1,44 +1,45 @@
 # Test Program
 # Tests various instruction types
+# Uses RISC-V ABI register names
 
 .text
 main:
     # Test arithmetic
-    ADDI x1, x0, 10         # x1 = 10
-    ADDI x2, x0, 20         # x2 = 20
-    ADD x3, x1, x2          # x3 = 30
-    SUB x4, x2, x1          # x4 = 10
+    ADDI a0, zero, 10       # a0 = 10
+    ADDI a1, zero, 20       # a1 = 20
+    ADD a2, a0, a1          # a2 = 30
+    SUB a3, a1, a0          # a3 = 10
     
     # Test logical operations
-    ADDI x5, x0, 0xFF       # x5 = 255
-    ANDI x6, x5, 0x0F       # x6 = 15
-    ORI x7, x6, 0xF0        # x7 = 255
+    ADDI t0, zero, 0xFF     # t0 = 255
+    ANDI t1, t0, 0x0F       # t1 = 15
+    ORI t2, t1, 0xF0        # t2 = 255
     
     # Test shifts
-    ADDI x8, x0, 1
-    SLLI x9, x8, 4          # x9 = 16
-    SRLI x10, x9, 2         # x10 = 4
+    ADDI t3, zero, 1
+    SLLI t4, t3, 4          # t4 = 16
+    SRLI t5, t4, 2          # t5 = 4
     
     # Test branches
-    ADDI x11, x0, 5
-    ADDI x12, x0, 5
-    BEQ x11, x12, equal_branch
-    ADDI x13, x0, 999       # Should not execute
+    ADDI s0, zero, 5
+    ADDI s1, zero, 5
+    BEQ s0, s1, equal_branch
+    ADDI s2, zero, 999      # Should not execute
     
 equal_branch:
-    ADDI x13, x0, 1         # x13 = 1 (branch taken)
+    ADDI s2, zero, 1        # s2 = 1 (branch taken)
     
     # Test memory operations
-    LUI x14, 0x10           # x14 = 0x10000 (data segment)
-    ADDI x15, x0, 42
-    SW x15, 0(x14)          # Store 42 at 0x10000
-    LW x16, 0(x14)          # Load back (x16 = 42)
+    LUI s3, 0x10            # s3 = 0x10000 (data segment)
+    ADDI s4, zero, 42
+    SW s4, 0(s3)            # Store 42 at 0x10000
+    LW s5, 0(s3)            # Load back (s5 = 42)
     
     # Display success message
-    LUI x20, 0xF0           # Display base
-    ADDI x21, x0, 79        # 'O'
-    SW x21, 0(x20)
-    ADDI x21, x0, 75        # 'K'
-    SW x21, 4(x20)
+    LUI a0, 0xF0            # Display base
+    ADDI a1, zero, 'O'
+    SW a1, 0(a0)
+    ADDI a1, zero, 'K'
+    SW a1, 4(a0)
     
     HALT

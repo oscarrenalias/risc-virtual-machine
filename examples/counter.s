@@ -16,7 +16,7 @@ loop:
     BEQ t0, t1, done
     
     # Convert counter to ASCII digit
-    ADDI a1, t0, 48         # a1 = counter + '0'
+    ADDI a1, t0, '0'        # a1 = counter + '0'
     
     # Write to display
     SW a1, 0(a0)

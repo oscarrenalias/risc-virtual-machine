@@ -34,15 +34,15 @@ display_result:
     LUI a0, 0xF0            # a0 = display base
     
     # Display '1' (first digit of 120)
-    ADDI a1, zero, 49       # '1'
+    ADDI a1, zero, '1'
     SW a1, 0(a0)
     
     # Display '2' (second digit)
-    ADDI a1, zero, 50       # '2'
+    ADDI a1, zero, '2'
     SW a1, 4(a0)
     
     # Display '0' (third digit)
-    ADDI a1, zero, 48       # '0'
+    ADDI a1, zero, '0'
     SW a1, 8(a0)
     
     HALT

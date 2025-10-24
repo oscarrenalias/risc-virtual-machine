@@ -1,76 +1,77 @@
 # Pattern Display Demo
 # Demonstrates memory-mapped display by creating a pattern
+# Uses RISC-V ABI register names and character literals
 
 .text
 main:
     # Load display base address
-    LUI x10, 0xF0           # x10 = 0xF0000
+    LUI a0, 0xF0            # a0 = 0xF0000 (display buffer start)
     
     # Pattern: "***  RISC-VM  ***"
     
     # Write asterisks
-    ADDI x11, x0, 42        # '*' = 42
-    SW x11, 0(x10)
-    SW x11, 4(x10)
-    SW x11, 8(x10)
+    ADDI a1, zero, '*'
+    SW a1, 0(a0)
+    SW a1, 4(a0)
+    SW a1, 8(a0)
     
-    # Space
-    ADDI x11, x0, 32        # ' ' = 32
-    SW x11, 12(x10)
-    SW x11, 16(x10)
+    # Spaces
+    ADDI a1, zero, ' '
+    SW a1, 12(a0)
+    SW a1, 16(a0)
     
     # Write "RISC-VM"
-    ADDI x11, x0, 82        # 'R'
-    SW x11, 20(x10)
-    ADDI x11, x0, 73        # 'I'
-    SW x11, 24(x10)
-    ADDI x11, x0, 83        # 'S'
-    SW x11, 28(x10)
-    ADDI x11, x0, 67        # 'C'
-    SW x11, 32(x10)
-    ADDI x11, x0, 45        # '-'
-    SW x11, 36(x10)
-    ADDI x11, x0, 86        # 'V'
-    SW x11, 40(x10)
-    ADDI x11, x0, 77        # 'M'
-    SW x11, 44(x10)
+    ADDI a1, zero, 'R'
+    SW a1, 20(a0)
+    ADDI a1, zero, 'I'
+    SW a1, 24(a0)
+    ADDI a1, zero, 'S'
+    SW a1, 28(a0)
+    ADDI a1, zero, 'C'
+    SW a1, 32(a0)
+    ADDI a1, zero, '-'
+    SW a1, 36(a0)
+    ADDI a1, zero, 'V'
+    SW a1, 40(a0)
+    ADDI a1, zero, 'M'
+    SW a1, 44(a0)
     
     # More spaces
-    ADDI x11, x0, 32        # ' '
-    SW x11, 48(x10)
-    SW x11, 52(x10)
+    ADDI a1, zero, ' '
+    SW a1, 48(a0)
+    SW a1, 52(a0)
     
     # More asterisks
-    ADDI x11, x0, 42        # '*'
-    SW x11, 56(x10)
-    SW x11, 60(x10)
-    SW x11, 64(x10)
+    ADDI a1, zero, '*'
+    SW a1, 56(a0)
+    SW a1, 60(a0)
+    SW a1, 64(a0)
     
     # Move to next line (80 chars * 4 bytes = 320 = 0x140)
-    ADDI x10, x10, 320
+    ADDI a0, a0, 320
     
     # Second line: "32-bit Architecture"
-    ADDI x11, x0, 51        # '3'
-    SW x11, 0(x10)
-    ADDI x11, x0, 50        # '2'
-    SW x11, 4(x10)
-    ADDI x11, x0, 45        # '-'
-    SW x11, 8(x10)
-    ADDI x11, x0, 98        # 'b'
-    SW x11, 12(x10)
-    ADDI x11, x0, 105       # 'i'
-    SW x11, 16(x10)
-    ADDI x11, x0, 116       # 't'
-    SW x11, 20(x10)
-    ADDI x11, x0, 32        # ' '
-    SW x11, 24(x10)
-    ADDI x11, x0, 65        # 'A'
-    SW x11, 28(x10)
-    ADDI x11, x0, 114       # 'r'
-    SW x11, 32(x10)
-    ADDI x11, x0, 99        # 'c'
-    SW x11, 36(x10)
-    ADDI x11, x0, 104       # 'h'
-    SW x11, 40(x10)
+    ADDI a1, zero, '3'
+    SW a1, 0(a0)
+    ADDI a1, zero, '2'
+    SW a1, 4(a0)
+    ADDI a1, zero, '-'
+    SW a1, 8(a0)
+    ADDI a1, zero, 'b'
+    SW a1, 12(a0)
+    ADDI a1, zero, 'i'
+    SW a1, 16(a0)
+    ADDI a1, zero, 't'
+    SW a1, 20(a0)
+    ADDI a1, zero, ' '
+    SW a1, 24(a0)
+    ADDI a1, zero, 'A'
+    SW a1, 28(a0)
+    ADDI a1, zero, 'r'
+    SW a1, 32(a0)
+    ADDI a1, zero, 'c'
+    SW a1, 36(a0)
+    ADDI a1, zero, 'h'
+    SW a1, 40(a0)
     
     HALT

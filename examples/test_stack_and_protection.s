@@ -1,21 +1,24 @@
 # Test program to show stack usage and then trigger write protection error
 # This demonstrates better stack state in the error report
+# Uses RISC-V ABI register names
 
-# Push some values onto the stack
-ADDI x5, x0, 100      # x5 = 100
-ADDI x2, x2, -4       # Move SP down (allocate 4 bytes)
-SW x5, 0(x2)          # Store value on stack
+.text
+main:
+    # Push some values onto the stack
+    ADDI t0, zero, 100      # t0 = 100
+    ADDI sp, sp, -4         # Move SP down (allocate 4 bytes)
+    SW t0, 0(sp)            # Store value on stack
 
-ADDI x6, x0, 200      # x6 = 200
-ADDI x2, x2, -4       # Allocate more
-SW x6, 0(x2)          # Store another value
+    ADDI t1, zero, 200      # t1 = 200
+    ADDI sp, sp, -4         # Allocate more
+    SW t1, 0(sp)            # Store another value
 
-ADDI x7, x0, 300      # x7 = 300
-ADDI x2, x2, -4       # Allocate more
-SW x7, 0(x2)          # Store another value
+    ADDI t2, zero, 300      # t2 = 300
+    ADDI sp, sp, -4         # Allocate more
+    SW t2, 0(sp)            # Store another value
 
-# Now try to write to text segment (should fail with protection enabled)
-ADDI x8, x0, 0        # x8 = 0 (text segment address)
-SW x5, 0(x8)          # This should trigger: Memory Protection Violation
+    # Now try to write to text segment (should fail with protection enabled)
+    ADDI t3, zero, 0        # t3 = 0 (text segment address)
+    SW t0, 0(t3)            # This should trigger: Memory Protection Violation
 
-HALT
+    HALT

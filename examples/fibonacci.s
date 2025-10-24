@@ -19,13 +19,13 @@ fib_loop:
     
     # Display current Fibonacci number (t0)
     # Convert to ASCII digit (only works for 0-9)
-    ADDI a2, t0, 48         # Add ASCII '0'
+    ADDI a2, t0, '0'        # Add ASCII '0'
     ADD a3, a0, a1          # Calculate display address
     SW a2, 0(a3)            # Write to display
     
     # Add space
     ADDI a1, a1, 4
-    ADDI a2, zero, 32       # Space character
+    ADDI a2, zero, ' '      # Space character
     ADD a3, a0, a1
     SW a2, 0(a3)
     

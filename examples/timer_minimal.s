@@ -1,16 +1,19 @@
 # Minimal interrupt test - just setup, no loop
+# Uses RISC-V ABI register names
+
 .text
+main:
     # Write handler address using label
-    ADDI x1, x0, handler # Handler address
-    CSRRW x0, 0x305, x1  # mtvec = handler address
+    ADDI ra, zero, handler  # Handler address
+    CSRRW zero, 0x305, ra   # mtvec = handler address
     
     # Enable global interrupts
-    ADDI x2, x0, 0x08    
-    CSRRW x0, 0x300, x2  # mstatus.MIE = 1
+    ADDI a0, zero, 0x08    
+    CSRRW zero, 0x300, a0   # mstatus.MIE = 1
     
     # Enable timer interrupt  
-    ADDI x2, x0, 0x80    
-    CSRRW x0, 0x304, x2  # mie = timer enable
+    ADDI a0, zero, 0x80    
+    CSRRW zero, 0x304, a0   # mie = timer enable
     
     HALT
 
