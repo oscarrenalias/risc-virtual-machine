@@ -416,12 +416,12 @@ SW x11, 0(x10)         # Write to display
 ```
 
 Display control registers:
-- `0xF7D00`: Current page (0-15)
-- `0xF7D01`: Cursor X position (0-79)
-- `0xF7D02`: Cursor Y position (0-24)
-- `0xF7D03`: Display mode
-- `0xF7D04`: Scroll enable (0=no, 1=yes)
-- `0xF7D05`: Clear screen (write any value)
+- `0xF7D00`: Current page (0-15) (⚠️ NOT IMPLEMENTED)
+- `0xF7D01`: Cursor X position (0-79) (⚠️ WRITE ONLY - ALSO NO SUPPORT FOR WRITE AT CURSOR)
+- `0xF7D02`: Cursor Y position (0-24) (⚠️ WRITE ONLY - ALSO NO SUPPORT FOR WRITE AT CURSOR)
+- `0xF7D03`: Display mode (⚠️ NOT IMPLEMENTED)
+- `0xF7D04`: Scroll enable (0=no, 1=yes) (⚠️ NOT IMPLEMENTED)
+- `0xF7D05`: Clear screen (write any value) (IMPLEMENTED)
 
 ## Architecture Details
 
