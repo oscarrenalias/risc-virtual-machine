@@ -369,29 +369,7 @@ optional arguments:
 
 ## Example Programs
 
-### Hello World (`examples/hello.asm`)
-Displays "Hello, World!" using memory-mapped display.
-
-### Counter (`examples/counter.asm`)
-Counts from 0 to 9 and displays each number.
-
-### Fibonacci (`examples/fibonacci.asm`)
-Calculates and displays the first 10 Fibonacci numbers.
-
-### Factorial (`examples/factorial.asm`)
-Calculates 5! = 120.
-
-### Test (`examples/test.asm`)
-Tests various instruction types.
-
-### Multiply (`examples/multiply.asm`) ✨ NEW
-Demonstrates MUL instruction with power calculation (2^5 = 32).
-
-### Division (`examples/division.asm`) ✨ NEW
-Shows DIV, DIVU, REM, REMU instructions with signed/unsigned examples.
-
-### Prime Check (`examples/prime_check.asm`) ✨ NEW
-Prime number checker using MUL and REM instructions.
+See ```examples``` folder.
 
 ## Writing Assembly Programs
 
@@ -486,11 +464,8 @@ assembly-virtual-machine/
 │   ├── assembler.py    # Assembly parser
 │   └── vm.py           # Virtual machine
 ├── examples/
-│   ├── hello.asm       # Hello World
-│   ├── counter.asm     # Counter program
-│   ├── fibonacci.asm   # Fibonacci sequence
-│   ├── factorial.asm   # Factorial calculator
-│   └── test.asm        # Instruction tests
+│   ├── hello.s
+│   └── ....s           # Instruction tests
 ├── main.py             # CLI entry point
 └── README.md           # This file
 ```
@@ -498,8 +473,7 @@ assembly-virtual-machine/
 ## Requirements
 
 - Python 3.7 or higher
-- UV package manager (recommended) or standard Python
-- No external dependencies (uses only standard library)
+- UV package manager
 
 ## Installation
 
@@ -517,8 +491,6 @@ uv sync
 ## Development
 
 ### Running Tests
-
-The project has a comprehensive 3-layer test suite with **199 tests** and **70% code coverage**:
 
 ```bash
 # Run all tests (unit + integration + program)
@@ -540,16 +512,14 @@ The project has a comprehensive 3-layer test suite with **199 tests** and **70% 
 ```
 
 **Test Layers:**
-- **Layer 1 (Unit)**: 154 tests - Component isolation (CPU, Memory, Timer, etc.)
-- **Layer 2 (Integration)**: 30 tests - Full VM instruction execution
-- **Layer 3 (Program)**: 15 tests - Complete realistic programs (factorial, fibonacci, etc.)
-
-See [TESTING.md](TESTING.md) for complete testing documentation.
+- **Layer 1 (Unit)**: Component isolation (CPU, Memory, Timer, etc.)
+- **Layer 2 (Integration)**: Full VM instruction execution
+- **Layer 3 (Program)**: Complete realistic programs (factorial, fibonacci, etc.)
 
 ### Continuous Integration
 
 Every commit triggers automated testing via GitHub Actions:
-- ✅ Full test suite (199 tests) runs on Ubuntu with Python 3.13
+- ✅ Full test suite
 - ✅ Coverage threshold enforced (≥65%, currently 70%)
 - ✅ Coverage reports uploaded as artifacts
 
